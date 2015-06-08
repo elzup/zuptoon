@@ -47,4 +47,6 @@ app.use (err, req, res, next) ->
     error: {}
   return
 
+# socket io
+
 module.exports = app

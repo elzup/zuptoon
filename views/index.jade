@@ -1,5 +1,13 @@
 extends layout
 
+block head_ex
+  script(src='/socket.io/socket.io.js')
+  script(src='javascripts/main.js')
+
 block content
   h1= title
   p Welcome to #{title}
+  p
+    | pc (
+    span#count ?
+    | )
