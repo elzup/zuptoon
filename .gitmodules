@@ -1,0 +1,3 @@
+[submodule "gshake"]
+	path = gshake
+	url = git@github.com:GerManson/gShake.git

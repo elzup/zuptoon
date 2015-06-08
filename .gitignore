@@ -73,7 +73,10 @@ crashlytics.properties
 crashlytics-build.properties
 
 
-#compiled
+# compiled
 *.html
 *.css
 *.js
+
+# temp escape
+./public/javascripts/gShake.js
