@@ -1,5 +1,6 @@
 
 $ ->
+  # enchant game
   enchant()
   game = new Core(320, 320)
   game.preload('images/chara1.png')
@@ -19,6 +20,7 @@ $ ->
 
   game.start()
 
+  # socket io
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
 

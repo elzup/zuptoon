@@ -39,6 +39,11 @@ io.on('connection', function(socket) {
         io.emit('shake');
     });
 
+    socket.on('move', function(data) {
+        console.log('move!');
+        console.log(data);
+    });
+
     socket.on('disconnect', function() {
         var person_count = socket.client.conn.server.clientsCount;
         console.log('pc- : ' + person_count);

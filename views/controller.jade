@@ -1,13 +1,9 @@
 extends layout
 
 block head_ex
+  meta(name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no")
   script(src='//192.168.1.50/socket.io/socket.io.js')
+  script(src='javascripts/enchant.js')
+  script(src='javascripts/ui.enchant.js')
   script(src='javascripts/gShake.js')
   script(src='javascripts/sub.js')
-
-block content
-  h1= title
-  p controller page
-  p
-    span#shake
-  button#shake-button debug
