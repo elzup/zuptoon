@@ -50,6 +50,8 @@ $ ->
         @.frame = 5
         @._style.zIndex = - PLAYER_Z_SHIFT
         player_group.addChild(@)
+      doubleshot: ()->
+        @.tl.then(-> @.shot()).delay(5).then(-> @.shot())
       shot: ()->
         new Liquid(@.dx, @.dy)
       walk: (dx, dy) ->
@@ -76,7 +78,7 @@ $ ->
     console.log(data)
 
   socket.on 'shake', (data) ->
-    player.shot()
+    player.doubleshot()
     console.log(data)
 
   socket.on 'count', (data) ->
