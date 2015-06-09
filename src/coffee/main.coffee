@@ -32,7 +32,10 @@ $ ->
       @.moveTo(x + @.width / 2, y + @.height / 2)
       @.frame = 12
       @._style.zIndex = - SPR_Z_SHIFT
-      @.tl.moveBy(vx * vspeed, vy * vspeed, 8).then -> @.pop()
+      # ランダムでずらす
+      rx = (Math.random() - 0.5) * 16
+      ry = (Math.random() - 0.5) * 16
+      @.tl.moveBy(vx * vspeed + rx, vy * vspeed + ry, 8).then -> @.pop()
 
       liquid_group.addChild(@)
     pop: ->
@@ -45,7 +48,9 @@ $ ->
       sfc.context.fillStyle = @.col
       sfc.context.fill()
       @.image = sfc
-      @.tl.scaleTo(@.r, @.r, 10.0)
+      # ランダムでずらす
+      rr = (Math.random() - 0.5) * 0.5
+      @.tl.scaleTo(@.r + rr, @.r + rr, 10.0)
 
   col_lib = ['red', 'yellow', 'blue', 'green'];
   Player = enchant.Class.create enchant.Sprite,
