@@ -12,8 +12,8 @@ $ ->
   SPR_Z_SHIFT = 1000
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
-
-  sp = 1.0
+  SHOT_RAPID_DELAY = game.fps / 5
+  sp = 2.0
 
   player_group = null
   liquid_group = null
@@ -50,6 +50,7 @@ $ ->
     dy: 0
     col: null
     id: null
+    last_shot_frame: 0
     initialize: (id) ->
       enchant.Sprite.call(@, 32, 32)
       @.id = id
@@ -64,7 +65,13 @@ $ ->
     doubleshot: ()->
       @.tl.then(-> @.shot()).delay(5).then(-> @.shot())
     shot: ()->
+      frame = game.frame
+      # 即連射禁止
+      if frame - @.last_shot_frame < SHOT_RAPID_DELAY
+        return
       new Liquid(@.x, @.y, @.dx, @.dy, @.col)
+      @.last_shot_frame = frame
+
     walk: (dx, dy) ->
       nx = ElzupUtils.clamp(@.x + dx * sp, game.width - @.width)
       ny = ElzupUtils.clamp(@.y + dy * sp, game.height - @.height)

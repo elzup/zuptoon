@@ -19,12 +19,28 @@ $ ->
     bg.image = game.assets['/images/apad.png']
     game.rootScene.addChild(bg)
 
+    is_touch = false
+    ex = null
+    ey = null
+
+    game.rootScene.addEventListener Event.ENTER_FRAME, () ->
+      if is_touch
+        dx = ex - game.width / 2
+        dy = ey - game.height / 2
+        va = ElzupUtils.vec_maguniture(dx, dy)
+        is_action = va > RADIUS_ACTION
+        emit_move(dx / va, dy / va, is_action)
+
+    game.rootScene.addEventListener Event.TOUCH_START, (e) ->
+      ex = e.x
+      ey = e.y
+      is_touch = true
+    game.rootScene.addEventListener Event.TOUCH_END, (e) ->
+      is_touch = false
+
     game.rootScene.addEventListener Event.TOUCH_MOVE, (e) ->
-      dx = e.x - game.width / 2
-      dy = e.y - game.height / 2
-      va = ElzupUtils.vec_maguniture(dx, dy)
-      is_action = va > RADIUS_ACTION
-      emit_move(dx / va, dy / va, is_action)
+      ex = e.x
+      ey = e.y
 
   game.start()
 
