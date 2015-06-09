@@ -6,3 +6,6 @@ class @ElzupUtils
 
   @rand_range = (num) ->
     Math.floor(Math.random() * num)
+
+  @vec_maguniture = (vx, vy) ->
+    Math.sqrt(vx * vx + vy * vy)

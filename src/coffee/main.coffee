@@ -13,7 +13,7 @@ $ ->
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
 
-  sp = 4.0
+  sp = 1.0
 
   player_group = null
   liquid_group = null
@@ -101,7 +101,8 @@ $ ->
     if !player?
       return
     player.walk(data.dx, data.dy)
-    console.log(data)
+    if data.act? && data.act
+      player.shot()
 
   socket.on 'shake', (data) ->
     player = get_player(data.id)

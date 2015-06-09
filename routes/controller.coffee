@@ -11,7 +11,7 @@ router.get '/', (req, res, next) ->
   return
 
 # ふるふるコントローラー
-router.get '/ff', (req, res, next) ->
+router.get '/shake', (req, res, next) ->
   res.render 'controller',
     title: 'えるとぅーん ふるふるコントローラー'
     controller_js: 'sub_shake'
