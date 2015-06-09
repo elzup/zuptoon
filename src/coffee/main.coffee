@@ -5,7 +5,7 @@ $ ->
 
   # core setting
   game = new Core(950, 480)
-  game.preload('images/chara1.png', 'images/icon0.png')
+  game.preload('/images/chara1.png', '/images/icon0.png')
   game.fps = 20;
 
   # constants
@@ -23,7 +23,7 @@ $ ->
     initialize: (x, y, vx, vy, col) ->
       enchant.Sprite.call(this, 16, 16)
       spr_count += 1
-      @.image = game.assets['images/icon0.png']
+      @.image = game.assets['/images/icon0.png']
       @.col = col
       @.moveTo(x + @.width / 2, y + @.height / 2)
       @.frame = 12
@@ -55,7 +55,7 @@ $ ->
       @.id = id
       @.frame = [6, 6, 7, 7]
       @.moveTo(game.width / 2 - @.width / 2, game.height / 2 - @.height / 2)
-      @.image = game.assets['images/chara1.png']
+      @.image = game.assets['/images/chara1.png']
       @.frame = 5
       @.col = col_lib[ElzupUtils.rand_range(col_lib.length)]
       console.log(@.col)

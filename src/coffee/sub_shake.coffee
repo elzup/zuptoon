@@ -1,14 +1,14 @@
 $ ->
   # enchant game
-  console.log('load main controller')
+  console.log('load shake controller')
   enchant()
   game = new Core(320, 320)
-  game.preload('/images/pad.png')
+  game.preload('images/pad.png')
   game.fps = 20;
 
   game.onload = ->
     pointer = new Sprite(32, 32)
-    pointer.image = game.assets['/images/pad.png']
+    pointer.image = game.assets['images/pad.png']
     pointer.scale(0.1)
 
     pointer.tl.moveTo(100, 100)
