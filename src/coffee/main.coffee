@@ -9,3 +9,5 @@ socket.on 'count', (data) ->
   $count = $('#count')
   $count.text(data.count)
   console.log(data)
+
+
