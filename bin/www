@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 require('coffee-script/register')
 
 /**
@@ -26,38 +25,38 @@ var io = require('socket.io')(server);
 io.on('connection', function(socket) {
     var person_count = socket.client.conn.server.clientsCount;
 
-    var count_inc = 0;
-    console.log('pc+ : ' + person_count);
     io.emit('count', { count: person_count });
 
-    socket.on('pyon', function() {
-        console.log('pyon');
-        io.emit('pyon');
-    });
-
-    socket.on('shake', function(data) {
-        console.log('shake!');
-        console.log(data);
+    socket.on('shake', function() {
+        console.log('shake!' + socket.id);
+        data = {
+            id: socket.id
+        }
         io.emit('shake', data);
     });
 
     socket.on('move', function(data) {
-        console.log('move!');
-        console.log(data);
+        console.log('move!' + data);
+        console.log('shake!');
+        data.id = socket.id
         io.emit('move', data);
     });
 
     socket.on('new', function(data) {
-        // rmeove
-        count_inc ++;
-        console.log('new: ' + data.id);
+        console.log('new : ' + socket.id);
+        data = {
+            id: socket.id
+        };
         io.emit('createuser', data);
     });
 
     socket.on('disconnect', function() {
-        var person_count = socket.client.conn.server.clientsCount;
-        console.log('pc- : ' + person_count);
-        io.emit('count', { count: person_count });
+        // var person_count = socket.client.conn.server.clientsCount;
+        console.log('exit : ' + socket.id);
+        data = {
+            id: socket.id
+        };
+        io.emit('removeuser', data);
     });
 });
 

@@ -42,28 +42,18 @@ $ ->
   # socket io
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
-
-  id = Math.floor(Math.random() * 10000);
-  console.log("createuser #{id}")
+  socket.emit 'new',
+    a: 'b'
 
   # スマホのシェイクイベントを取得
   emit_shake = ->
-    socket.emit 'shake',
-      id: id
-    $shake = $('#shake')
+    socket.emit 'shake'
 
   emit_move = (dx, dy) ->
     console.log(dx, dy)
     socket.emit 'move',
-      id: id
       dx: dx
       dy: dy
 
   # 新規ユーザ作成
-  socket.emit 'new',
-    id: id
-
   $(@).gShake -> emit_shake()
-
-  $('#shake-button').click ->
-    emit_shake()

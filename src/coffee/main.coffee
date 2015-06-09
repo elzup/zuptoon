@@ -93,6 +93,7 @@ $ ->
         break
     return null
 
+
   socket.on 'move', (data) ->
     player = get_player(data.id)
     if !player?
@@ -118,5 +119,8 @@ $ ->
     player = new Player(data.id)
     player_group.addChild(player)
 
-  socket.on 'deleteuser', (data) ->
-    null
+  socket.on 'removeuser', (data) ->
+    console.log('delete user')
+    console.log(data)
+    player = get_player(data.id)
+    player_group.removeChild(player)
