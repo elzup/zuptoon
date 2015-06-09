@@ -42,9 +42,7 @@ io.on('connection', function(socket) {
 
     socket.on('new', function(data) {
         console.log('new : ' + socket.id);
-        data = {
-            id: socket.id
-        };
+        data.id = socket.id
         io.emit('createuser', data);
     });
 

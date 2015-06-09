@@ -13,6 +13,7 @@ $ ->
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
   SHOT_RAPID_DELAY = game.fps / 5
+  RADIUS_ACTION = 320 * 0.4
   sp = 2.0
 
   player_group = null
@@ -49,12 +50,16 @@ $ ->
   Player = enchant.Class.create enchant.Sprite,
     dx: 1
     dy: 0
+    team: 0
+    type: 0
     col: null
     id: null
     last_shot_frame: 0
-    initialize: (id) ->
+    initialize: (id, team, type) ->
       enchant.Sprite.call(@, 32, 32)
       @.id = id
+      @.team = team
+      @.type = type
       @.frame = [6, 6, 7, 7]
       @.moveTo(game.width / 2 - @.width / 2, game.height / 2 - @.height / 2)
       @.image = game.assets['/images/chara1.png']
@@ -66,12 +71,12 @@ $ ->
     supershot: ()->
       # 三方向ショット
       new Liquid(@.x, @.y, @.dx, @.dy, @.col, 60.0, 4)
-    shot: ()->
+    shot: (vsp)->
       frame = game.frame
       # 即連射禁止
       if frame - @.last_shot_frame < SHOT_RAPID_DELAY
         return
-      new Liquid(@.x, @.y, @.dx, @.dy, @.col)
+      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 30.0 * vsp)
       @.last_shot_frame = frame
 
     walk: (dx, dy) ->
@@ -112,9 +117,13 @@ $ ->
     player = get_player(data.id)
     if !player?
       return
-    player.walk(data.dx, data.dy)
-    if data.act? && data.act
-      player.shot()
+    rate = data.radius / RADIUS_ACTION
+    console.log(player)
+    if player.type == 0 && RADIUS_ACTION < data.radius
+      player.walk(data.dx, data.dy)
+      player.shot(rate)
+    else
+      player.walk(data.dx * rate, data.dy * rate)
 
   socket.on 'shake', (data) ->
     player = get_player(data.id)
@@ -135,7 +144,7 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
-    player = new Player(data.id)
+    player = new Player(data.id, data.team, data.type)
     player_group.addChild(player)
 
   socket.on 'removeuser', (data) ->

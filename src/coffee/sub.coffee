@@ -6,6 +6,8 @@ $ ->
   game.preload('/images/apad.png')
   game.fps = 20;
 
+  RADIUS_ACTION = 320 * 0.4
+
   # action(shot)と判定するが中央からの距離
   RADIUS_ACTION = game.width * 0.4
 
@@ -20,6 +22,7 @@ $ ->
     game.rootScene.addChild(bg)
 
     is_touch = false
+    is_out_start_touch = false
     ex = null
     ey = null
 
@@ -28,14 +31,18 @@ $ ->
         dx = ex - game.width / 2
         dy = ey - game.height / 2
         va = ElzupUtils.vec_maguniture(dx, dy)
-        is_action = va > RADIUS_ACTION
-        emit_move(dx / va, dy / va, is_action)
+
+        if is_out_start_touch
+          va *= 10
+        emit_move(dx / va, dy / va, va)
 
     game.rootScene.addEventListener Event.TOUCH_START, (e) ->
       ex = e.x
       ey = e.y
+      is_out_start_touch = RADIUS_ACTION < ElzupUtils.vec_maguniture(ex - game.width / 2, ey - game.height / 2)
       is_touch = true
     game.rootScene.addEventListener Event.TOUCH_END, (e) ->
+      is_out_start_touch = false
       is_touch = false
 
     game.rootScene.addEventListener Event.TOUCH_MOVE, (e) ->
@@ -47,19 +54,22 @@ $ ->
   # socket io
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
-  socket.emit 'new'
+  # TODO: team
+  socket.emit 'new',
+    type: 0
+    team: 0
 
   # スマホのシェイクイベントを取得
   emit_shake = ->
     socket.emit 'shake',
       act: 'swim'
 
-  emit_move = (dx, dy, is_action=false) ->
-    console.log(dx, dy, is_action)
+  emit_move = (dx, dy, radius=false) ->
+    console.log(dx, dy, radius)
     socket.emit 'move',
       dx: dx
       dy: dy
-      act: is_action
+      radius: radius
 
   # 新規ユーザ作成
   $(@).gShake -> emit_shake()

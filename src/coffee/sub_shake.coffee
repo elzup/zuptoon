@@ -28,8 +28,7 @@ $ ->
         dx = ex - game.width / 2
         dy = ey - game.height / 2
         va = ElzupUtils.vec_maguniture(dx, dy)
-        is_action = va > RADIUS_ACTION
-        emit_move(dx / va, dy / va, is_action)
+        emit_move(dx / va, dy / va, va)
 
     game.rootScene.addEventListener Event.TOUCH_START, (e) ->
       ex = e.x
@@ -47,21 +46,22 @@ $ ->
   # socket io
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
-  socket.emit 'new'
+  socket.emit 'new',
+    type: 1
+    team: 0
 
   # スマホのシェイクイベントを取得
   emit_shake = ->
     socket.emit 'shake',
       act: 'shot'
 
-  emit_move = (dx, dy, is_action=false) ->
-    console.log(dx, dy, is_action)
+  emit_move = (dx, dy, radius) ->
+    console.log(dx, dy, radius)
     # shake controller は no shot
-    is_action = false
     socket.emit 'move',
       dx: dx
       dy: dy
-      act: is_action
+      radius: radius
 
 
   # 新規ユーザ作成
