@@ -36,12 +36,13 @@ io.on('connection', function(socket) {
     socket.on('shake', function(data) {
         console.log('shake!');
         console.log(data);
-        io.emit('shake');
+        io.emit('shake', data);
     });
 
     socket.on('move', function(data) {
         console.log('move!');
         console.log(data);
+        io.emit('move', data);
     });
 
     socket.on('disconnect', function() {

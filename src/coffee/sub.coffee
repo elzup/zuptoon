@@ -15,15 +15,16 @@ $ ->
     game.rootScene.addEventListener Event.ENTER_FRAME, () ->
       dx = 0
       dy = 0
+
       if game.input.up || game.input.down || game.input.left || game.input.right
         if game.input.up
-          dy += 1
-        if game.input.down
           dy -= 1
+        if game.input.down
+          dy += 1
         if game.input.left
-          dx += 1
-        if game.input.right
           dx -= 1
+        if game.input.right
+          dx += 1
         if dx != 0 && dy != 0
           dx *= 0.7
           dy *= 0.7
