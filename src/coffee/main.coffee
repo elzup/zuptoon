@@ -12,9 +12,10 @@ $ ->
   SPR_Z_SHIFT = 1000
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
-  SHOT_RAPID_DELAY = game.fps / 5
+  SHOT_RAPID_DELAY = game.fps / 5 # 0.2秒
   RADIUS_ACTION = 320 * 0.4
-  sp = 2.0
+
+  SWIM_TIME = game.fps * 0.8 # 0.8秒
 
   player_group = null
   liquid_group = null
@@ -48,13 +49,15 @@ $ ->
 
   col_lib = ['red', 'yellow', 'blue', 'green'];
   Player = enchant.Class.create enchant.Sprite,
+    id: null
+    sp: 2.0
     dx: 1
     dy: 0
     team: 0
     type: 0
     col: null
-    id: null
     last_shot_frame: 0
+    is_swim: false
     initialize: (id, team, type) ->
       enchant.Sprite.call(@, 32, 32)
       @.id = id
@@ -73,21 +76,27 @@ $ ->
       new Liquid(@.x, @.y, @.dx, @.dy, @.col, 60.0, 4)
     shot: (vsp)->
       frame = game.frame
-      # 即連射禁止
-      if frame - @.last_shot_frame < SHOT_RAPID_DELAY
+      # 即連射, swim中 禁止
+      if frame - @.last_shot_frame < SHOT_RAPID_DELAY || @.is_swim
         return
-      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 30.0 * vsp)
+      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 20.0 * vsp)
       @.last_shot_frame = frame
 
     walk: (dx, dy) ->
-      nx = ElzupUtils.clamp(@.x + dx * sp, game.width - @.width)
-      ny = ElzupUtils.clamp(@.y + dy * sp, game.height - @.height)
+      nx = ElzupUtils.clamp(@.x + dx * @.sp, game.width - @.width)
+      ny = ElzupUtils.clamp(@.y + dy * @.sp, game.height - @.height)
       @.moveTo(nx, ny)
       @.dx = dx
       @.dy = dy
       @.scaleX = if dx > 0 then 1 else -1
 
     swim: ()->
+      @.sp = 10.0
+      @.is_swim = true
+      @.tl.delay(SWIM_TIME).then(->
+        @.sp = 2.0
+        @.is_swim = false
+      )
       console.log('swim')
 
   game.onload = ->

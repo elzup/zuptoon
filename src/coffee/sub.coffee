@@ -62,6 +62,7 @@ $ ->
 
 
   # スマホのシェイクイベントを取得
+  # TODO: remove act:
   emit_shake = ->
     socket.emit 'shake',
       act: 'swim'
