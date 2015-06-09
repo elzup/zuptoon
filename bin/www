@@ -25,6 +25,8 @@ var server = http.createServer(app);
 var io = require('socket.io')(server);
 io.on('connection', function(socket) {
     var person_count = socket.client.conn.server.clientsCount;
+
+    var count_inc = 0;
     console.log('pc+ : ' + person_count);
     io.emit('count', { count: person_count });
 
@@ -43,6 +45,13 @@ io.on('connection', function(socket) {
         console.log('move!');
         console.log(data);
         io.emit('move', data);
+    });
+
+    socket.on('new', function(data) {
+        // rmeove
+        count_inc ++;
+        console.log('new: ' + data.id);
+        io.emit('createuser', data);
     });
 
     socket.on('disconnect', function() {
