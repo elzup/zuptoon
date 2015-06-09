@@ -20,20 +20,21 @@ $ ->
 
   Liquid = enchant.Class.create enchant.Sprite,
     col: 0
-    initialize: (x, y, vx, vy, col) ->
+    r: 2.0
+    initialize: (x, y, vx, vy, col, vspeed=30.0, r=2.0) ->
       enchant.Sprite.call(this, 16, 16)
       spr_count += 1
       @.image = game.assets['/images/icon0.png']
       @.col = col
+      @.r = r
       @.moveTo(x + @.width / 2, y + @.height / 2)
       @.frame = 12
       @._style.zIndex = - SPR_Z_SHIFT
-      @.tl.moveBy(vx * 30.0, vy * 30.0, 8).then -> @.pop()
+      @.tl.moveBy(vx * vspeed, vy * vspeed, 8).then -> @.pop()
 
       liquid_group.addChild(@)
     pop: ->
       @.scale(2.0, 2.0)
-
       sfc = new Surface(16, 16)
       ctx = sfc.context
       ctx.beginPath()
@@ -42,7 +43,7 @@ $ ->
       sfc.context.fillStyle = @.col
       sfc.context.fill()
       @.image = sfc
-      @.tl.scaleTo(2.0, 2.0, 10.0)
+      @.tl.scaleTo(@.r, @.r, 10.0)
 
   col_lib = ['red', 'yellow', 'blue', 'green'];
   Player = enchant.Class.create enchant.Sprite,
@@ -63,7 +64,8 @@ $ ->
       @._style.zIndex = - PLAYER_Z_SHIFT
       player_group.addChild(@)
     supershot: ()->
-      @.tl.then(-> @.shot()).delay(5).then(-> @.shot())
+      # 三方向ショット
+      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 60.0, 4)
     shot: ()->
       frame = game.frame
       # 即連射禁止
