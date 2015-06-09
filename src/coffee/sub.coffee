@@ -51,13 +51,15 @@ $ ->
 
   game.start()
 
+  get_params = ElzupUtils.get_parameters()
   # socket io
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
   # TODO: team
   socket.emit 'new',
-    type: 0
-    team: 0
+    type: get_params['type']
+    team: get_params['team']
+
 
   # スマホのシェイクイベントを取得
   emit_shake = ->

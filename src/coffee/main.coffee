@@ -64,7 +64,7 @@ $ ->
       @.moveTo(game.width / 2 - @.width / 2, game.height / 2 - @.height / 2)
       @.image = game.assets['/images/chara1.png']
       @.frame = 5
-      @.col = col_lib[ElzupUtils.rand_range(col_lib.length)]
+      @.col = col_lib[team]
       console.log(@.col)
       @._style.zIndex = - PLAYER_Z_SHIFT
       player_group.addChild(@)
@@ -118,7 +118,7 @@ $ ->
     if !player?
       return
     rate = data.radius / RADIUS_ACTION
-    console.log(player)
+    console.log(rate)
     if player.type == 0 && RADIUS_ACTION < data.radius
       player.walk(data.dx, data.dy)
       player.shot(rate)
@@ -129,11 +129,11 @@ $ ->
     player = get_player(data.id)
     if !player?
       return
-    switch data.act
-      when 'shot'
-        player.supershot()
-      when 'swim'
+    switch player.type
+      when 0
         player.swim()
+      when 1
+        player.supershot()
     console.log(data)
 
   socket.on 'count', (data) ->
@@ -144,7 +144,7 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
-    player = new Player(data.id, data.team, data.type)
+    player = new Player(data.id, parseInt(data.team), parseInt(data.type + 0))
     player_group.addChild(player)
 
   socket.on 'removeuser', (data) ->
