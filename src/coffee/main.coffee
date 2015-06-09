@@ -62,7 +62,7 @@ $ ->
       console.log(@.col)
       @._style.zIndex = - PLAYER_Z_SHIFT
       player_group.addChild(@)
-    doubleshot: ()->
+    supershot: ()->
       @.tl.then(-> @.shot()).delay(5).then(-> @.shot())
     shot: ()->
       frame = game.frame
@@ -79,6 +79,9 @@ $ ->
       @.dx = dx
       @.dy = dy
       @.scaleX = if dx > 0 then 1 else -1
+
+    swim: ()->
+      console.log('swim')
 
   game.onload = ->
 
@@ -115,7 +118,11 @@ $ ->
     player = get_player(data.id)
     if !player?
       return
-    player.doubleshot()
+    switch data.act
+      when 'shot'
+        player.supershot()
+      when 'swim'
+        player.swim()
     console.log(data)
 
   socket.on 'count', (data) ->

@@ -51,7 +51,8 @@ $ ->
 
   # スマホのシェイクイベントを取得
   emit_shake = ->
-    socket.emit 'shake'
+    socket.emit 'shake',
+      act: 'swim'
 
   emit_move = (dx, dy, is_action=false) ->
     console.log(dx, dy, is_action)

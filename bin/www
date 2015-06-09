@@ -27,11 +27,9 @@ io.on('connection', function(socket) {
 
     io.emit('count', { count: person_count });
 
-    socket.on('shake', function() {
+    socket.on('shake', function(data) {
         console.log('shake!' + socket.id);
-        data = {
-            id: socket.id
-        }
+        data.id = socket.id
         io.emit('shake', data);
     });
 
