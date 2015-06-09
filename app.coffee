@@ -5,6 +5,7 @@ logger = require('morgan')
 cookieParser = require('cookie-parser')
 bodyParser = require('body-parser')
 routes = require('./routes/index')
+routes_c = require('./routes/controller')
 app = express()
 
 # view engine setup
@@ -19,6 +20,7 @@ app.use bodyParser.urlencoded(extended: false)
 app.use cookieParser()
 app.use express.static(path.join(__dirname, 'public'))
 app.use '/', routes
+app.use '/con', routes_c
 
 # catch 404 and forward to error handler
 app.use (req, res, next) ->

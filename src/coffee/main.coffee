@@ -1,5 +1,5 @@
 
-socket_url = 'http://localhost:3000'
+socket_url = 'http://192.168.1.50'
 socket = io.connect socket_url
 
 socket.on 'pyon', (data) ->
@@ -9,4 +9,3 @@ socket.on 'count', (data) ->
   $count = $('#count')
   $count.text(data.count)
   console.log(data)
-
