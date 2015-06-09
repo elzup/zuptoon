@@ -4,7 +4,7 @@ $ ->
   enchant()
 
   # core setting
-  game = new Core(320, 320)
+  game = new Core(950, 480)
   game.preload('images/chara1.png', 'images/icon0.png')
   game.fps = 20;
 
@@ -57,7 +57,7 @@ $ ->
       @.moveTo(game.width / 2 - @.width / 2, game.height / 2 - @.height / 2)
       @.image = game.assets['images/chara1.png']
       @.frame = 5
-      @.col = col_lib[Math.floor(Math.random() * col_lib.length)]
+      @.col = col_lib[ElzupUtils.rand_range(col_lib.length)]
       console.log(@.col)
       @._style.zIndex = - PLAYER_Z_SHIFT
       player_group.addChild(@)
@@ -66,7 +66,9 @@ $ ->
     shot: ()->
       new Liquid(@.x, @.y, @.dx, @.dy, @.col)
     walk: (dx, dy) ->
-      @.moveBy(dx * sp, dy * sp)
+      nx = ElzupUtils.clamp(@.x + dx * sp, game.width - @.width)
+      ny = ElzupUtils.clamp(@.y + dy * sp, game.height - @.height)
+      @.moveTo(nx, ny)
       @.dx = dx
       @.dy = dy
       @.scaleX = if dx > 0 then 1 else -1
@@ -77,6 +79,7 @@ $ ->
     player_group = new Group()
     liquid_group = new Group()
     # player は手前
+    game.rootScene.backgroundColor = "#AAA";
     game.rootScene.addChild(liquid_group)
     game.rootScene.addChild(player_group)
 
@@ -92,7 +95,6 @@ $ ->
         return player
         break
     return null
-
 
   socket.on 'move', (data) ->
     player = get_player(data.id)
