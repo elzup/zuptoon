@@ -4,7 +4,7 @@ $ ->
 
   # core setting
   game = new Core(1024, 768)
-  game.preload('/images/chara1.png', '/images/icon0.png', '/images/map0.png')
+  game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png')
   game.fps = 20;
 
   # constants
@@ -13,11 +13,29 @@ $ ->
   spr_count = 0
   SHOT_RAPID_DELAY = game.fps / 5 # 0.2秒
   RADIUS_ACTION = 320 * 0.4
+  COL_LIB = ['red', 'yellow', 'blue', 'green'];
+
+  INIT_POS = [
+    {
+      x: game.width / 7
+      y: game.height / 7
+    }, {
+      x: game.width * 6 / 7
+      y: game.height / 7
+    }, {
+      x: game.width / 7
+      y: game.height * 6 / 7
+    }, {
+      x: game.width * 6 / 7
+      y: game.height * 6 / 7
+    }
+  ]
 
   SWIM_TIME = game.fps * 0.8 # 0.8秒
 
   player_group = null
   liquid_group = null
+
 
   map = null
 
@@ -53,7 +71,6 @@ $ ->
       rr = (Math.random() - 0.5) * 0.5
       @.tl.scaleTo(@.r + rr, @.r + rr, 10.0)
 
-  col_lib = ['red', 'yellow', 'blue', 'green'];
   Player = enchant.Class.create enchant.Sprite,
     id: null
     sp: 2.0
@@ -69,16 +86,17 @@ $ ->
       @.id = id
       @.team = team
       @.type = type
-      @.frame = [6, 6, 7, 7]
-      @.moveTo(game.width / 2 - @.width / 2, game.height / 2 - @.height / 2)
-      @.image = game.assets['/images/chara1.png']
-      @.frame = 5
-      @.col = col_lib[team]
+
+      @.moveTo(INIT_POS[team].x, INIT_POS[team].y)
+      @.image = game.assets['/images/space3.png']
+      @.frame = team * 5
+      @.col = COL_LIB[team]
       console.log(@.col)
       @._style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
     supershot: ()->
       # 三方向ショット
+      console.log('super')
       new Liquid(@.x, @.y, @.dx, @.dy, @.col, 60.0, 4)
     shot: (vsp)->
       frame = game.frame
@@ -99,8 +117,10 @@ $ ->
     swim: ->
       @.sp = 10.0
       @.is_swim = true
+      @.frame = @.team * 5 + 3
       @.tl.delay(SWIM_TIME).then(->
         @.sp = 2.0
+        @.frame = @.team * 5
         @.is_swim = false
       )
 
@@ -199,6 +219,7 @@ $ ->
     player = get_player(data.id)
     if !player?
       return
+    console.log(player.type)
     switch player.type
       when 0
         player.swim()
@@ -214,7 +235,7 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
-    player = new Player(data.id, parseInt(data.team), parseInt(data.type + 0))
+    player = new Player(data.id, parseInt(data.team), parseInt(data.type))
     player_group.addChild(player)
 
   socket.on 'removeuser', (data) ->
