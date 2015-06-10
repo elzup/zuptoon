@@ -37,21 +37,25 @@ $ ->
   player_group = null
   liquid_group = null
 
+  MAP_WIDTH = 64 * 2
+  MAP_HEIGHT = 48 * 2
+  MAP_SIZE = 8
+
   map = null
   baseMap = null
 
   Liquid = enchant.Class.create enchant.Sprite,
-    col: 0
+    team: 0
     r: 2.0
-    initialize: (x, y, vx, vy, col, vspeed = 30.0, r = 2.0) ->
+    initialize: (x, y, vx, vy, team, vspeed = 30.0, r = 2.0) ->
       enchant.Sprite.call(this, 16, 16)
       spr_count += 1
       @.image = game.assets['/images/icon0.png']
-      @.col = col
       @.r = r
       @.moveTo(x + @.width / 2, y + @.height / 2)
       @.frame = 12
       @._style.zIndex = -SPR_Z_SHIFT
+      @.team = team
       # ランダムでずらす
       rx = (Math.random() - 0.5) * 16
       ry = (Math.random() - 0.5) * 16
@@ -65,10 +69,17 @@ $ ->
       ctx.beginPath()
       ctx.arc(sfc.width / 2, sfc.height / 2, sfc.width / 2, 0, Math.PI * 2, false)
       ctx.fill()
-      sfc.context.fillStyle = @.col
+      sfc.context.fillStyle = COL_LIB[@.team]
       sfc.context.fill()
       @.image = sfc
       @.tl.scaleTo(@.r, @.r, 10.0)
+      # @.tl.hide()
+      # [mx, my] = get_map_pos(@.x, @.y)
+      # console.log([mx, my])
+
+      # console.log(1 + @.team)
+      # baseMap[my][mx] = 1 + @.team
+      # console.log(baseMap)
 
   Player = enchant.Class.create enchant.Sprite,
     id: null
@@ -96,7 +107,7 @@ $ ->
     supershot: ()->
       # 三方向ショット
       console.log('super')
-      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 60.0, 4)
+      new Liquid(@.x, @.y, @.dx, @.dy, @.team, 60.0, 4)
     shot: (vsp)->
       frame = game.frame
       # 即連射, swim中 禁止
@@ -104,7 +115,7 @@ $ ->
         return
       # ランダムでずらす
       rr = (Math.random() - 0.5) * 0.5
-      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 20.0 * vsp, 2.0 + rr)
+      new Liquid(@.x, @.y, @.dx, @.dy, @.team, 20.0 * vsp, 2.0 + rr)
       @.last_shot_frame = frame
 
     walk: (dx, dy) ->
@@ -132,10 +143,8 @@ $ ->
     liquid_group = new Group()
     # player は手前
 
-    map = new Map(8, 8)
+    map = new Map(MAP_SIZE, MAP_SIZE)
     map.image = game.assets['/images/map0.png']
-    MAP_WIDTH = 64 * 2
-    MAP_HEIGHT = 48 * 2
     baseMap = [0...MAP_HEIGHT]
     for i in baseMap
       baseMap[i] = [0...MAP_WIDTH]
@@ -155,6 +164,11 @@ $ ->
   # socket io
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
+
+  get_map_pos = (sx, sy) ->
+    mx = ElzupUtils.clamp(Math.floor(sx / MAP_SIZE), MAP_WIDTH)
+    my = ElzupUtils.clamp(Math.floor(sy / MAP_SIZE), MAP_HEIGHT)
+    return [mx, my]
 
   get_player = (id) ->
     for player in player_group.childNodes
