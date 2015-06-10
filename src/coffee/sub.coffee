@@ -6,7 +6,7 @@ $ ->
   game.preload('/images/apad.png')
   game.fps = 20;
 
-  RADIUS_ACTION = 320 * 0.4
+  RADIUS_ACTION = 160 * 0.4
 
   # action(shot)と判定するが中央からの距離
   RADIUS_ACTION = game.width * 0.4
@@ -16,7 +16,7 @@ $ ->
     # NOTE: game.rootScene#size game.root#size 違い
     # とりあえず画像のサイズ
     bg = new Sprite(100, 100)
-    bg.scale(game.width / 100, game.width / 100)
+    bg.scale(game.width / 200, game.width / 200)
     bg.moveTo(game.width / 2 - bg.width / 2, game.height / 2 - bg.height / 2)
     bg.image = game.assets['/images/apad.png']
     game.rootScene.addChild(bg)

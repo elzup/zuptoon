@@ -12,7 +12,7 @@ $ ->
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
   SHOT_RAPID_DELAY = game.fps / 5 # 0.2秒
-  RADIUS_ACTION = 320 * 0.4
+  RADIUS_ACTION = 160 * 0.4
   COL_LIB = ['red', 'yellow', 'blue', 'green'];
 
   INIT_POS = [
@@ -32,6 +32,7 @@ $ ->
   ]
 
   SWIM_TIME = game.fps * 0.8 # 0.8秒
+  PLAYER_SPEED = 2.0
 
   player_group = null
   liquid_group = null
@@ -67,13 +68,11 @@ $ ->
       sfc.context.fillStyle = @.col
       sfc.context.fill()
       @.image = sfc
-      # ランダムでずらす
-      rr = (Math.random() - 0.5) * 0.5
-      @.tl.scaleTo(@.r + rr, @.r + rr, 10.0)
+      @.tl.scaleTo(@.r, @.r, 10.0)
 
   Player = enchant.Class.create enchant.Sprite,
     id: null
-    sp: 2.0
+    sp: PLAYER_SPEED
     dx: 1
     dy: 0
     team: 0
@@ -103,7 +102,9 @@ $ ->
       # 即連射, swim中 禁止
       if frame - @.last_shot_frame < SHOT_RAPID_DELAY || @.is_swim
         return
-      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 20.0 * vsp)
+      # ランダムでずらす
+      rr = (Math.random() - 0.5) * 0.5
+      new Liquid(@.x, @.y, @.dx, @.dy, @.col, 20.0 * vsp, 2.0 + rr)
       @.last_shot_frame = frame
 
     walk: (dx, dy) ->
@@ -115,11 +116,11 @@ $ ->
       @.scaleX = if dx > 0 then 1 else -1
 
     swim: ->
-      @.sp = 10.0
+      @.sp = PLAYER_SPEED * 4
       @.is_swim = true
       @.frame = @.team * 5 + 3
       @.tl.delay(SWIM_TIME).then(->
-        @.sp = 2.0
+        @.sp = PLAYER_SPEED
         @.frame = @.team * 5
         @.is_swim = false
       )
