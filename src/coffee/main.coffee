@@ -7,6 +7,8 @@ $ ->
   game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png')
   game.fps = 20;
 
+  SHOW_TYPE = 1
+
   # constants
   SPR_Z_SHIFT = 1000
   PLAYER_Z_SHIFT = 10000
@@ -207,13 +209,15 @@ $ ->
         if j * j + i * i > mr2
           continue
         fill_map(mx + i, my + j, team)
-    map.loadData(baseMap)
+    if SHOW_TYPE == 1
+      map.loadData(baseMap)
 
   fill_pos = (mx, my, team, mr = 1) ->
     for j in [-mr..mr]
       for i in [-mr..mr]
         fill_map(mx + i, my + j, team)
-    map.loadData(baseMap)
+    if SHOW_TYPE == 1
+      map.loadData(baseMap)
 
   fill_map = (mx, my, team) ->
     if ElzupUtils.clamp(my, MAP_HEIGHT - 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH - 1) != mx
@@ -226,6 +230,8 @@ $ ->
     [mx, my]
 
   draw_circle = (x, y, r, col) ->
+    if SHOW_TYPE != 0
+      return
     context = liquid_sprite.image.context
     context.beginPath()
     context.fillStyle = col
