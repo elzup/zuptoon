@@ -31,15 +31,19 @@ $ ->
     }
   ]
 
+  MAP_WIDTH = 64 * 2
+  MAP_HEIGHT = 48 * 2
+
   SWIM_TIME = game.fps * 0.8 # 0.8秒
   PLAYER_SPEED = 1.0
 
   player_group = null
   liquid_group = null
 
-  MAP_WIDTH = 64 * 2
-  MAP_HEIGHT = 48 * 2
   MAP_SIZE = 8
+
+  liquid_sprite = null
+  liquid_surface = null
 
   map = null
   baseMap = null
@@ -73,8 +77,7 @@ $ ->
       sfc.context.fill()
       @.image = sfc
       @.tl.scaleTo(@.scaler, @.scaler, game.fps / 2).then(->
-        [mx, my] = get_map_pos(@.x, @.y, @.width / 2)
-        fill_pos_circle(mx, my, @.r(), @.team)
+        fill_pos_circle(@.x + @.width / 2, @.y + @.width / 2, @.r(), @.team)
         @.parentNode.removeChild(@)
       )
       kill_player_circle(@.x, @.y, @.r(), @.team)
@@ -178,8 +181,13 @@ $ ->
           baseMap[i][j] = 32
     map.loadData(baseMap)
 
+    liquid_sprite = new Sprite(game.width, game.height)
+    liquid_surface = new Surface(game.width, game.height)
+    liquid_sprite.image = liquid_surface
+
     game.rootScene.backgroundColor = "#AAA";
     game.rootScene.addChild(map)
+    game.rootScene.addChild(liquid_sprite)
     game.rootScene.addChild(liquid_group)
     game.rootScene.addChild(player_group)
 
@@ -189,7 +197,9 @@ $ ->
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
 
-  fill_pos_circle = (mx, my, r, team) ->
+  fill_pos_circle = (x, y, r, team) ->
+    draw_circle(x, y, r, COL_LIB[team])
+    [mx, my] = get_map_pos(x, y)
     mr = Math.floor(r / MAP_SIZE)
     mr2 = mr * mr
     for j in [-mr..mr]
@@ -215,6 +225,15 @@ $ ->
     my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_SIZE), MAP_HEIGHT)
     [mx, my]
 
+  draw_circle = (x, y, r, col) ->
+    context = liquid_sprite.image.context
+    context.beginPath()
+    context.fillStyle = col
+    context.arc
+    context.arc(x, y, r, 0, Math.PI * 2)
+    context.closePath()
+    context.fill()
+
   get_player = (id) ->
     for player in player_group.childNodes
       if player.id == id
@@ -231,8 +250,7 @@ $ ->
       dy = player.y - y
       if dx * dx + dy * dy > r2
         continue
-      [mx, my] = get_map_pos(player.x, player.y, player.width / 2)
-      fill_pos_circle(mx, my, 50, team)
+      fill_pos_circle(player.x + player.width / 2, player.y + player.height / 2, 50, team)
       player.die()
 
   socket.on 'move', (data) ->
