@@ -2,47 +2,55 @@ $ ->
   # enchant game
   enchant()
 
-  # core setting
-  game = new Core(1024, 768)
-  game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png')
-  game.fps = 20;
-
-  SHOW_TYPE = 1
-
   # constants
+  FPS = 20
+
   SPR_Z_SHIFT = 1000
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
-  SHOT_RAPID_DELAY = game.fps / 5 # 0.2秒
+  SHOT_RAPID_DELAY = FPS / 5 # 0.2秒
   RADIUS_ACTION = 160 * 0.4
   COL_LIB = ['red', 'yellow', 'blue', 'green'];
 
+  MAP_MATRIX_SIZE = 8
+  MAP_WIDTH_NUM = 64 * 2
+  MAP_HEIGHT_NUM = 48 * 2
+  MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
+  MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
+
   INIT_POS = [
     {
-      x: game.width / 7
-      y: game.height / 7
+      x: MAP_WIDTH / 7
+      y: MAP_HEIGHT / 7
     }, {
-      x: game.width * 6 / 7
-      y: game.height / 7
+      x: MAP_WIDTH * 6 / 7
+      y: MAP_HEIGHT / 7
     }, {
-      x: game.width / 7
-      y: game.height * 6 / 7
+      x: MAP_WIDTH / 7
+      y: MAP_HEIGHT * 6 / 7
     }, {
-      x: game.width * 6 / 7
-      y: game.height * 6 / 7
+      x: MAP_WIDTH * 6 / 7
+      y: MAP_HEIGHT * 6 / 7
     }
+
   ]
 
-  MAP_WIDTH = 64 * 2
-  MAP_HEIGHT = 48 * 2
-
-  SWIM_TIME = game.fps * 0.8 # 0.8秒
+  SWIM_TIME = FPS * 0.8 # 0.8秒
   PLAYER_SPEED = 1.0
 
+  # map view type
+  # 0: graphical
+  # 1: matrix_fill
+  SHOW_TYPE = 1
+
+  # core setting
+  game = new Core(1024, 768)
+  game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png')
+  game.fps = FPS
+
+  # global
   player_group = null
   liquid_group = null
-
-  MAP_SIZE = 8
 
   liquid_sprite = null
   liquid_surface = null
@@ -78,7 +86,7 @@ $ ->
       sfc.context.fillStyle = COL_LIB[@.team]
       sfc.context.fill()
       @.image = sfc
-      @.tl.scaleTo(@.scaler, @.scaler, game.fps / 2).then(->
+      @.tl.scaleTo(@.scaler, @.scaler, FPS / 2).then(->
         fill_pos_circle(@.x + @.width / 2, @.y + @.width / 2, @.r(), @.team)
         @.parentNode.removeChild(@)
       )
@@ -133,8 +141,8 @@ $ ->
       # swim モードでかつプレイヤーの位置がチーム色の場合
       if @.is_swim && @.on_team_color()
         sp *= 4
-      nx = ElzupUtils.clamp(@.x + dx * sp, game.width - @.width)
-      ny = ElzupUtils.clamp(@.y + dy * sp, game.height - @.height)
+      nx = ElzupUtils.clamp(@.x + dx * sp, MAP_WIDTH - @.width)
+      ny = ElzupUtils.clamp(@.y + dy * sp, MAP_HEIGHT - @.height)
       @.moveTo(nx, ny)
       @.dx = dx
       @.dy = dy
@@ -157,10 +165,10 @@ $ ->
     die: ->
       @.is_die = true
       @.opacity = 0.5
-      @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, game.fps).delay(game.fps).and()
+      @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, FPS).delay(FPS).and()
         .repeat(->
           @.opacity = @.age % 2
-        , game.fps).then(->
+        , FPS).then(->
           @.opacity = 1.0
           @.is_die = false
         )
@@ -172,19 +180,19 @@ $ ->
     liquid_group = new Group()
     # player は手前
 
-    map = new Map(MAP_SIZE, MAP_SIZE)
+    map = new Map(MAP_MATRIX_SIZE, MAP_MATRIX_SIZE)
     map.image = game.assets['/images/map0.png']
-    baseMap = [0...MAP_HEIGHT]
+    baseMap = [0...MAP_HEIGHT_NUM]
     for i in baseMap
-      baseMap[i] = [0...MAP_WIDTH]
+      baseMap[i] = [0...MAP_WIDTH_NUM]
       for j in baseMap[i]
         baseMap[i][j] = 0
-        if i == 0 or i == MAP_HEIGHT - 1 or j == 0 or j == MAP_WIDTH - 1
+        if i == 0 or i == MAP_HEIGHT_NUM - 1 or j == 0 or j == MAP_WIDTH_NUM - 1
           baseMap[i][j] = 32
     map.loadData(baseMap)
 
-    liquid_sprite = new Sprite(game.width, game.height)
-    liquid_surface = new Surface(game.width, game.height)
+    liquid_sprite = new Sprite(MAP_WIDTH, MAP_HEIGHT)
+    liquid_surface = new Surface(MAP_WIDTH, MAP_HEIGHT)
     liquid_sprite.image = liquid_surface
 
     game.rootScene.backgroundColor = "#AAA";
@@ -202,7 +210,7 @@ $ ->
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
     [mx, my] = get_map_pos(x, y)
-    mr = Math.floor(r / MAP_SIZE)
+    mr = Math.floor(r / MAP_MATRIX_SIZE)
     mr2 = mr * mr
     for j in [-mr..mr]
       for i in [-mr..mr]
@@ -220,13 +228,13 @@ $ ->
       map.loadData(baseMap)
 
   fill_map = (mx, my, team) ->
-    if ElzupUtils.clamp(my, MAP_HEIGHT - 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH - 1) != mx
+    if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 1) != mx
       return
     baseMap[my][mx] = team + 1
 
   get_map_pos = (sx, sy, r = 0) ->
-    mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_SIZE), MAP_WIDTH)
-    my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_SIZE), MAP_HEIGHT)
+    mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_MATRIX_SIZE), MAP_WIDTH_NUM)
+    my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM)
     [mx, my]
 
   draw_circle = (x, y, r, col) ->
