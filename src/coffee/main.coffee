@@ -46,12 +46,12 @@ $ ->
 
   Liquid = enchant.Class.create enchant.Sprite,
     team: 0
-    r: 2.0
-    initialize: (x, y, vx, vy, team, vspeed = 30.0, r = 2.0) ->
+    scaler: 2.0
+    initialize: (x, y, vx, vy, team, vspeed = 30.0, scaler = 2.0) ->
       enchant.Sprite.call(this, 16, 16)
       spr_count += 1
       @.image = game.assets['/images/icon0.png']
-      @.r = r
+      @.scaler = scaler
       @.moveTo(x + @.width / 2, y + @.height / 2)
       @.frame = 12
       @._style.zIndex = -SPR_Z_SHIFT
@@ -60,8 +60,8 @@ $ ->
       rx = (Math.random() - 0.5) * 16
       ry = (Math.random() - 0.5) * 16
       @.tl.moveBy(vx * vspeed + rx, vy * vspeed + ry, 8).then -> @.pop()
-
       liquid_group.addChild(@)
+
     pop: ->
       @.scale(2.0, 2.0)
       sfc = new Surface(16, 16)
@@ -72,10 +72,15 @@ $ ->
       sfc.context.fillStyle = COL_LIB[@.team]
       sfc.context.fill()
       @.image = sfc
-      @.tl.scaleTo(@.r, @.r, 10.0).then(->
+      @.tl.scaleTo(@.scaler, @.scaler, game.fps / 2).then(->
         [mx, my] = get_map_pos(@.x, @.y, @.width / 2)
-        fill_pos_circle(mx, my, @.team + 1, (@.width * @.scaleX / 2))
-      ).hide()
+        fill_pos_circle(mx, my, @.r(), @.team)
+        @.parentNode.removeChild(@)
+      )
+      kill_player_circle(@.x, @.y, @.r(), @.team)
+    r: ->
+      @.width * @.scaleX / 2
+
 
   Player = enchant.Class.create enchant.Sprite,
     id: null
@@ -100,20 +105,25 @@ $ ->
       @._style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
     supershot: ()->
-      # 三方向ショット
-      console.log('super')
+      if @.is_die
+        return
+      # TODO: 三方向ショット
       new Liquid(@.x, @.y, @.dx, @.dy, @.team, 60.0, 4)
     shot: (vsp)->
+      if @.is_die
+        return
       frame = game.frame
       # 即連射, swim中 禁止
       if frame - @.last_shot_frame < SHOT_RAPID_DELAY || @.is_swim
         return
       # ランダムでずらす
-      rr = (Math.random() - 0.5) * 0.5
+      rr = Math.random() * 0.5
       new Liquid(@.x, @.y, @.dx, @.dy, @.team, 20.0 * vsp, 2.0 + rr)
       @.last_shot_frame = frame
 
     walk: (dx, dy) ->
+      if @.is_die
+        return
       sp = @.sp
       # swim モードでかつプレイヤーの位置がチーム色の場合
       if @.is_swim && @.on_team_color()
@@ -126,6 +136,8 @@ $ ->
       @.scaleX = if dx > 0 then 1 else -1
 
     swim: ->
+      if @.is_die
+        return
       @.is_swim = true
       @.frame = @.team * 5 + 2
       @.tl.delay(SWIM_TIME).then(->
@@ -135,6 +147,18 @@ $ ->
     on_team_color: () ->
       [mx, my] = get_map_pos(@.x, @.y, @.width)
       baseMap[my][mx] == @.team + 1
+    id_die: false
+
+    die: ->
+      @.is_die = true
+      @.opacity = 0.5
+      @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, game.fps).delay(game.fps).and()
+        .repeat(->
+          @.opacity = @.age % 2
+        , game.fps).then(->
+          @.opacity = 1.0
+          @.is_die = false
+        )
 
 
   game.onload = ->
@@ -165,11 +189,12 @@ $ ->
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
 
-  fill_pos_circle = (mx, my, team, r) ->
+  fill_pos_circle = (mx, my, r, team) ->
     mr = Math.floor(r / MAP_SIZE)
+    mr2 = mr * mr
     for j in [-mr..mr]
       for i in [-mr..mr]
-        if j * j + i * i > mr * mr
+        if j * j + i * i > mr2
           continue
         fill_map(mx + i, my + j, team)
     map.loadData(baseMap)
@@ -183,7 +208,7 @@ $ ->
   fill_map = (mx, my, team) ->
     if ElzupUtils.clamp(my, MAP_HEIGHT - 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH - 1) != mx
       return
-    baseMap[my][mx] = team
+    baseMap[my][mx] = team + 1
 
   get_map_pos = (sx, sy, r = 0) ->
     mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_SIZE), MAP_WIDTH)
@@ -196,6 +221,19 @@ $ ->
         return player
         break
     null
+
+  kill_player_circle = (x, y, r, team) ->
+    r2 = r * r
+    for player in player_group.childNodes
+      if player.team == team or player.is_die
+        continue
+      dx = player.x - x
+      dy = player.y - y
+      if dx * dx + dy * dy > r2
+        continue
+      [mx, my] = get_map_pos(player.x, player.y, player.width / 2)
+      fill_pos_circle(mx, my, 50, team)
+      player.die()
 
   socket.on 'move', (data) ->
     player = get_player(data.id)
