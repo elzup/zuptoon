@@ -18,6 +18,10 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
+  # TODO: set to 60?
+  GAME_LIMIT_TIME_SEC = 20
+
+  FOOTER_HEIGHT = 80
 
   INIT_POS = [
     {
@@ -33,7 +37,6 @@ $ ->
       x: MAP_WIDTH * 6 / 7
       y: MAP_HEIGHT * 6 / 7
     }
-
   ]
 
   SWIM_TIME = FPS * 0.8 # 0.8秒
@@ -50,7 +53,7 @@ $ ->
   SHOW_TYPE = 1
 
   # core setting
-  game = new Core(1024, 768)
+  game = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
   game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png')
   game.fps = FPS
 
@@ -62,10 +65,12 @@ $ ->
   liquid_group = null
 
   liquid_sprite = null
-  liquid_surface = null
 
   map = null
   baseMap = null
+
+  timer_lavel = null
+  score_bar = null
 
   # socket io
   socket_url = 'http://192.168.1.50'
@@ -206,14 +211,30 @@ $ ->
     map.loadData(baseMap)
 
     liquid_sprite = new Sprite(MAP_WIDTH, MAP_HEIGHT)
-    liquid_surface = new Surface(MAP_WIDTH, MAP_HEIGHT)
-    liquid_sprite.image = liquid_surface
+    liquid_sprite.image = new Surface(MAP_WIDTH, MAP_HEIGHT)
+
+    timer_label = new Label()
+    timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
+    timer_label.font = '50px "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif'
+    timer_label.addEventListener Event.ENTER_FRAME, ->
+      progress = parseInt(game.frame / game.fps)
+      time = GAME_LIMIT_TIME_SEC - progress + "";
+      @.text = time
+
+    score_bar = new Sprite(MAP_WIDTH, FOOTER_HEIGHT)
+    score_bar.image = new Surface(MAP_WIDTH, FOOTER_HEIGHT)
+
+    score_cover = new Sprite(MAP_WIDTH, FOOTER_HEIGHT * 0.25)
+    score_cover.backgroundColor = "gray"
 
     game.rootScene.backgroundColor = "#AAA";
     game.rootScene.addChild(map)
     game.rootScene.addChild(liquid_sprite)
     game.rootScene.addChild(liquid_group)
     game.rootScene.addChild(player_group)
+    game.rootScene.addChild(score_cover)
+    game.rootScene.addChild(score_bar)
+    game.rootScene.addChild(timer_label)
 
   create_map = ->
     baseMap = [0...MAP_HEIGHT_NUM]
