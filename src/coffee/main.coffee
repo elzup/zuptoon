@@ -129,7 +129,7 @@ $ ->
     swim: ->
       @.sp = PLAYER_SPEED * 4
       @.is_swim = true
-      @.frame = @.team * 5 + 3
+      @.frame = @.team * 5 + 2
       @.tl.delay(SWIM_TIME).then(->
         @.sp = PLAYER_SPEED
         @.frame = @.team * 5
