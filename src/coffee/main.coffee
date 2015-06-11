@@ -19,8 +19,8 @@ $ ->
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
   # TODO: set to 60?
-  GAME_LIMIT_TIME_SEC = 20
-
+  GAME_TIME_LIMIT_SEC = 20
+  GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
 
   SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
@@ -221,16 +221,22 @@ $ ->
     timer_label.font = '50px "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif'
     timer_label.addEventListener Event.ENTER_FRAME, ->
       progress = parseInt(game.frame / game.fps)
-      time = GAME_LIMIT_TIME_SEC - progress + "";
-      @.text = time
+      time = GAME_TIME_LIMIT_SEC - progress;
+      @.text = time + ""
+      # if (time <= GAME_TIME_PRE_FINISH)
+      #   timer_label.tl.scaleTo(1, 1).scaleTo(1.5, 1.5, FPS * 0.6).delay(FPS * 0.4)
+      if (time == GAME_TIME_PRE_FINISH)
+        score_cover.tl.scaleTo(1.0, 1.0, FPS * GAME_TIME_PRE_FINISH)
+      # TODO: game finish
 
     score_bar = new Sprite(MAP_WIDTH, FOOTER_HEIGHT)
     score_bar.image = new Surface(MAP_WIDTH, FOOTER_HEIGHT)
     score_bar.moveTo(0, MAP_HEIGHT)
 
-    score_cover = new Sprite(MAP_WIDTH, FOOTER_HEIGHT * 0.25)
+    score_cover = new Sprite(MAP_WIDTH * 0.5, FOOTER_HEIGHT)
     score_cover.backgroundColor = "gray"
-    score_bar.moveTo(0, MAP_HEIGHT)
+    score_cover.scale(0, 1.0)
+    score_cover.moveTo(MAP_WIDTH * 0.75, MAP_HEIGHT)
 
     score = [0, 0, 0, 0]
 
@@ -239,8 +245,8 @@ $ ->
     game.rootScene.addChild(liquid_sprite)
     game.rootScene.addChild(liquid_group)
     game.rootScene.addChild(player_group)
-    game.rootScene.addChild(score_cover)
     game.rootScene.addChild(score_bar)
+    game.rootScene.addChild(score_cover)
     game.rootScene.addChild(timer_label)
 
   create_map = ->
