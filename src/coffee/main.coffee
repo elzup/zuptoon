@@ -23,6 +23,8 @@ $ ->
 
   FOOTER_HEIGHT = 80
 
+  SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
+
   INIT_POS = [
     {
       x: MAP_WIDTH / 7
@@ -69,8 +71,9 @@ $ ->
   map = null
   baseMap = null
 
-  timer_lavel = null
+  timer_label = null
   score_bar = null
+  score = null
 
   # socket io
   socket_url = 'http://192.168.1.50'
@@ -223,9 +226,13 @@ $ ->
 
     score_bar = new Sprite(MAP_WIDTH, FOOTER_HEIGHT)
     score_bar.image = new Surface(MAP_WIDTH, FOOTER_HEIGHT)
+    score_bar.moveTo(0, MAP_HEIGHT)
 
     score_cover = new Sprite(MAP_WIDTH, FOOTER_HEIGHT * 0.25)
     score_cover.backgroundColor = "gray"
+    score_bar.moveTo(0, MAP_HEIGHT)
+
+    score = [0, 0, 0, 0]
 
     game.rootScene.backgroundColor = "#AAA";
     game.rootScene.addChild(map)
@@ -259,6 +266,8 @@ $ ->
         fill_map(mx + i, my + j, team)
     if SHOW_TYPE == 1
       map.loadData(baseMap)
+    # NOTE: マップに対する変更箇所全てに必要
+    update_score()
 
   fill_pos = (mx, my, team, mr = 1) ->
     for j in [-mr..mr]
@@ -268,9 +277,17 @@ $ ->
       map.loadData(baseMap)
 
   fill_map = (mx, my, team) ->
-    if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 1) != mx
+    if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 2, 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 2, 1) != mx
+      return
+    pre = baseMap[my][mx]
+    if pre == team + 1
       return
     baseMap[my][mx] = team + 1
+    # スコア更新
+    score[team] += 1
+    if pre == 0
+      return
+    score[pre - 1] -= 1
 
   get_map_pos = (sx, sy, r = 0) ->
     mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_MATRIX_SIZE), MAP_WIDTH_NUM)
@@ -283,7 +300,6 @@ $ ->
     context = liquid_sprite.image.context
     context.beginPath()
     context.fillStyle = col
-    context.arc
     context.arc(x, y, r, 0, Math.PI * 2)
     context.closePath()
     context.fill()
@@ -306,6 +322,20 @@ $ ->
         continue
       fill_pos_circle(player.x + player.width / 2, player.y + player.height / 2, 50, team)
       player.die()
+
+  update_score = ->
+    console.log(score)
+    max = Math.max.apply(null, score)
+    context = score_bar.image.context
+    context.beginPath()
+    context.clearRect(0, 0, MAP_WIDTH, FOOTER_HEIGHT)
+    for i in [0..3]
+      context.fillStyle = COL_LIB[i]
+      # 右端からトップチームを100% とした割合
+      h = FOOTER_HEIGHT * i / 4
+      context.fillRect(0, h, score[i] * MAP_WIDTH / max, h + FOOTER_HEIGHT / 4 - 1)
+    context.closePath()
+    context.fill()
 
   socket.on 'move', (data) ->
     player = get_player(data.id)
