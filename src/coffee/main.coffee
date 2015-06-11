@@ -73,13 +73,10 @@ $ ->
       sfc.context.fill()
       @.image = sfc
       @.tl.scaleTo(@.r, @.r, 10.0)
-      # @.tl.hide()
-      # [mx, my] = get_map_pos(@.x, @.y)
-      # console.log([mx, my])
+      @.tl.hide()
+      [mx, my] = get_map_pos(@.x, @.y, @.width / 2)
 
-      # console.log(1 + @.team)
-      # baseMap[my][mx] = 1 + @.team
-      # console.log(baseMap)
+      fill_pos(mx, my, @.team + 1, 1)
 
   Player = enchant.Class.create enchant.Sprite,
     id: null
@@ -101,7 +98,6 @@ $ ->
       @.image = game.assets['/images/space3.png']
       @.frame = team * 5
       @.col = COL_LIB[team]
-      console.log(@.col)
       @._style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
     supershot: ()->
@@ -137,7 +133,6 @@ $ ->
       )
 
   game.onload = ->
-
     # create liquid image
     player_group = new Group()
     liquid_group = new Group()
@@ -165,17 +160,27 @@ $ ->
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
 
-  get_map_pos = (sx, sy) ->
-    mx = ElzupUtils.clamp(Math.floor(sx / MAP_SIZE), MAP_WIDTH)
-    my = ElzupUtils.clamp(Math.floor(sy / MAP_SIZE), MAP_HEIGHT)
-    return [mx, my]
+  fill_pos = (mx, my, team, mr = 1) ->
+    for j in [-mr..mr]
+      for i in [-mr..mr]
+        fill_map(mx + i, my + j, team)
+
+    map.loadData(baseMap)
+
+  fill_map = (mx, my, team) ->
+    baseMap[ElzupUtils.clamp(my, MAP_HEIGHT)][ElzupUtils.clamp(mx, MAP_WIDTH)] = team
+
+  get_map_pos = (sx, sy, r = 0) ->
+    mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_SIZE), MAP_WIDTH)
+    my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_SIZE), MAP_HEIGHT)
+    [mx, my]
 
   get_player = (id) ->
     for player in player_group.childNodes
       if player.id == id
         return player
         break
-    return null
+    null
 
   socket.on 'move', (data) ->
     player = get_player(data.id)
