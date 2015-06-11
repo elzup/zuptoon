@@ -18,6 +18,7 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
+
   INIT_POS = [
     {
       x: MAP_WIDTH / 7
@@ -37,10 +38,15 @@ $ ->
 
   SWIM_TIME = FPS * 0.8 # 0.8秒
   PLAYER_SPEED = 1.0
+  GameTerm =
+    ready: 0
+    progress: 1
+    result: 2
 
   # map view type
   # 0: graphical
   # 1: matrix_fill
+  # TODO: enum constains
   SHOW_TYPE = 1
 
   # core setting
@@ -49,6 +55,9 @@ $ ->
   game.fps = FPS
 
   # global
+  # NOTE: term 言い回しは正当？
+  game_term = null
+
   player_group = null
   liquid_group = null
 
@@ -57,6 +66,11 @@ $ ->
 
   map = null
   baseMap = null
+
+  # socket io
+  socket_url = 'http://192.168.1.50'
+  socket = io.connect socket_url
+
 
   Liquid = enchant.Class.create enchant.Sprite,
     team: 0
@@ -157,7 +171,7 @@ $ ->
         @.frame = @.team * 5
         @.is_swim = false
       )
-    on_team_color: () ->
+    on_team_color: ->
       [mx, my] = get_map_pos(@.x, @.y, @.width)
       baseMap[my][mx] == @.team + 1
     id_die: false
@@ -175,6 +189,12 @@ $ ->
 
 
   game.onload = ->
+    game_init()
+
+  game.start()
+
+  game_init = ->
+    game_term = GameTerm.ready
     # create liquid image
     player_group = new Group()
     liquid_group = new Group()
@@ -182,13 +202,7 @@ $ ->
 
     map = new Map(MAP_MATRIX_SIZE, MAP_MATRIX_SIZE)
     map.image = game.assets['/images/map0.png']
-    baseMap = [0...MAP_HEIGHT_NUM]
-    for i in baseMap
-      baseMap[i] = [0...MAP_WIDTH_NUM]
-      for j in baseMap[i]
-        baseMap[i][j] = 0
-        if i == 0 or i == MAP_HEIGHT_NUM - 1 or j == 0 or j == MAP_WIDTH_NUM - 1
-          baseMap[i][j] = 32
+    baseMap = create_map()
     map.loadData(baseMap)
 
     liquid_sprite = new Sprite(MAP_WIDTH, MAP_HEIGHT)
@@ -201,11 +215,16 @@ $ ->
     game.rootScene.addChild(liquid_group)
     game.rootScene.addChild(player_group)
 
-  game.start()
+  create_map = ->
+    baseMap = [0...MAP_HEIGHT_NUM]
+    for i in baseMap
+      baseMap[i] = [0...MAP_WIDTH_NUM]
+      for j in baseMap[i]
+        baseMap[i][j] = 0
+        if i == 0 or i == MAP_HEIGHT_NUM - 1 or j == 0 or j == MAP_WIDTH_NUM - 1
+          baseMap[i][j] = 32
+    baseMap
 
-  # socket io
-  socket_url = 'http://192.168.1.50'
-  socket = io.connect socket_url
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
