@@ -73,7 +73,10 @@ $ ->
 
   timer_label = null
   score_bar = null
+  score_cover = null
   score = null
+
+  game_start_time = 0
 
   # socket io
   socket_url = 'http://192.168.1.50'
@@ -220,13 +223,18 @@ $ ->
     timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
     timer_label.font = '50px "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif'
     timer_label.addEventListener Event.ENTER_FRAME, ->
-      progress = parseInt(game.frame / game.fps)
+      if game_term != GameTerm.progress
+        return
+      progress = parseInt((game.frame - game_start_time) / game.fps)
       time = GAME_TIME_LIMIT_SEC - progress;
       @.text = time + ""
       # if (time <= GAME_TIME_PRE_FINISH)
       #   timer_label.tl.scaleTo(1, 1).scaleTo(1.5, 1.5, FPS * 0.6).delay(FPS * 0.4)
       if (time == GAME_TIME_PRE_FINISH)
         score_cover.tl.scaleTo(1.0, 1.0, FPS * GAME_TIME_PRE_FINISH)
+      if (time == 0)
+        game_result()
+
       # TODO: game finish
 
     score_bar = new Sprite(MAP_WIDTH, FOOTER_HEIGHT)
@@ -240,6 +248,13 @@ $ ->
 
     score = [0, 0, 0, 0]
 
+    btn = new Button("Start");
+    margin = 20
+    btn.moveTo(margin, MAP_HEIGHT + margin)
+    btn.ontouchstart = ->
+      game.rootScene.removeChild(@)
+      game_start()
+
     game.rootScene.backgroundColor = "#AAA";
     game.rootScene.addChild(map)
     game.rootScene.addChild(liquid_sprite)
@@ -247,7 +262,18 @@ $ ->
     game.rootScene.addChild(player_group)
     game.rootScene.addChild(score_bar)
     game.rootScene.addChild(score_cover)
+    game.rootScene.addChild(btn)
     game.rootScene.addChild(timer_label)
+
+  game_start = ->
+    game_term = GameTerm.progress
+    game_start_time = game.frame
+
+  game_result = ->
+    game_term = GameTerm.result
+    score_cover.tl.delay(FPS * 1).scaleTo(0, 1.0, FPS * 3)
+
+  game_result = ->
 
   create_map = ->
     baseMap = [0...MAP_HEIGHT_NUM]
