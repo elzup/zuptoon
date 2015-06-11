@@ -2,11 +2,18 @@ $ ->
   # enchant game
   console.log('load main controller')
   enchant()
-  game = new Core(320, 320)
+  game = new Core(480, 320)
   game.preload('/images/apad.png')
   game.fps = 60
 
   RADIUS_ACTION = 160 * 0.4
+
+  BG_SIZE = 100
+
+  CON_X = game.width / 4
+  CON_Y = game.height / 2
+  CON_X2 = game.width * 3 / 4
+  CON_Y2 = CON_Y
 
   # action(shot)と判定するが中央からの距離
   RADIUS_ACTION = game.width * 0.4
@@ -15,41 +22,70 @@ $ ->
 
     # NOTE: game.rootScene#size game.root#size 違い
     # とりあえず画像のサイズ
-    bg = new Sprite(100, 100)
-    bg.scale(game.width / 200, game.width / 200)
-    bg.moveTo(game.width / 2 - bg.width / 2, game.height / 2 - bg.height / 2)
-    bg.image = game.assets['/images/apad.png']
-    game.rootScene.addChild(bg)
+    # 左コントローラ
+    bg_left = new Sprite(BG_SIZE, BG_SIZE)
+    bg_left.scale(game.height / 200, game.height / 200)
+    bg_left.moveTo(CON_X - BG_SIZE / 2, CON_Y - BG_SIZE / 2)
+    bg_left.image = game.assets['/images/apad.png']
+    game.rootScene.addChild(bg_left)
 
-    is_touch = false
-    is_out_start_touch = false
-    ex = null
-    ey = null
+    # 右コントローラ
+    bg_right = new Sprite(BG_SIZE, BG_SIZE)
+    bg_right.scale(game.height / 200, game.height / 200)
+    bg_right.moveTo(CON_X2 - BG_SIZE / 2, CON_Y2 - BG_SIZE / 2)
+    bg_right.image = game.assets['/images/apad.png']
+    game.rootScene.addChild(bg_right)
+
+    is_touch_l = false
+    ex_l = null
+    ey_l = null
+
+    is_touch_r = false
+    ex_r = null
+    ey_r = null
 
     game.rootScene.addEventListener Event.ENTER_FRAME, () ->
-      if is_touch
-        dx = ex - game.width / 2
-        dy = ey - game.height / 2
+      if is_touch_l
+        dx = ex_l - CON_X
+        dy = ey_l - CON_Y
+        rad = get_rad(dx, dy)
         va = ElzupUtils.vec_maguniture(dx, dy)
-
-        if is_out_start_touch
-          va *= 10
-        emit_move(dx / va, dy / va, va)
+        emit_move(rad, va, 0)
+      if is_touch_r
+        dx = ex_r - CON_X2
+        dy = ey_r - CON_Y2
+        rad = get_rad(dx, dy)
+        va = ElzupUtils.vec_maguniture(dx, dy)
+        emit_move(rad, va, 1)
 
     game.rootScene.addEventListener Event.TOUCH_START, (e) ->
-      ex = e.x
-      ey = e.y
-      is_out_start_touch = RADIUS_ACTION < ElzupUtils.vec_maguniture(ex - game.width / 2, ey - game.height / 2)
-      is_touch = true
+      if e.x < game.width / 2
+        is_touch_l = true
+        ex_l = e.x
+        ey_l = e.y
+      else
+        is_touch_r = true
+        ex_r = e.x
+        ey_r = e.y
+
     game.rootScene.addEventListener Event.TOUCH_END, (e) ->
-      is_out_start_touch = false
-      is_touch = false
+      if e.x < game.width / 2
+        is_touch_l = false
+      else
+        is_touch_r = false
 
     game.rootScene.addEventListener Event.TOUCH_MOVE, (e) ->
-      ex = e.x
-      ey = e.y
+      if e.x < game.width / 2
+        ex_l = e.x
+        ey_l = e.y
+      else
+        ex_r = e.x
+        ey_r = e.y
 
   game.start()
+
+  get_rad = (x, y) ->
+    Math.atan2(y, x)
 
   get_params = ElzupUtils.get_parameters()
   # socket io
@@ -67,12 +103,16 @@ $ ->
     socket.emit 'shake',
       act: 'swim'
 
-  emit_move = (dx, dy, radius=false) ->
-    console.log(dx, dy, radius)
+  emit_move = (rad, pow, con) ->
+    # varidate
+    rad = parseInt(rad * 100) / 100
+    pow = ElzupUtils.clamp(parseInt(pow), 100)
+    console.log(rad, pow, con)
+
     socket.emit 'move',
-      dx: dx
-      dy: dy
-      radius: radius
+      rad: rad
+      pow: pow
+      con: con
 
   # 新規ユーザ作成
   $(@).gShake -> emit_shake()
