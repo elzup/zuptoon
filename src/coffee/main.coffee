@@ -32,7 +32,7 @@ $ ->
   ]
 
   SWIM_TIME = game.fps * 0.8 # 0.8秒
-  PLAYER_SPEED = 2.0
+  PLAYER_SPEED = 1.0
 
   player_group = null
   liquid_group = null
@@ -72,11 +72,10 @@ $ ->
       sfc.context.fillStyle = COL_LIB[@.team]
       sfc.context.fill()
       @.image = sfc
-      @.tl.scaleTo(@.r, @.r, 10.0)
-      @.tl.hide()
-      [mx, my] = get_map_pos(@.x, @.y, @.width / 2)
-
-      fill_pos(mx, my, @.team + 1, 1)
+      @.tl.scaleTo(@.r, @.r, 10.0).then(->
+        [mx, my] = get_map_pos(@.x, @.y, @.width / 2)
+        fill_pos_circle(mx, my, @.team + 1, (@.width * @.scaleX / 2))
+      ).hide()
 
   Player = enchant.Class.create enchant.Sprite,
     id: null
@@ -115,22 +114,28 @@ $ ->
       @.last_shot_frame = frame
 
     walk: (dx, dy) ->
-      nx = ElzupUtils.clamp(@.x + dx * @.sp, game.width - @.width)
-      ny = ElzupUtils.clamp(@.y + dy * @.sp, game.height - @.height)
+      sp = @.sp
+      # swim モードでかつプレイヤーの位置がチーム色の場合
+      if @.is_swim && @.on_team_color()
+        sp *= 4
+      nx = ElzupUtils.clamp(@.x + dx * sp, game.width - @.width)
+      ny = ElzupUtils.clamp(@.y + dy * sp, game.height - @.height)
       @.moveTo(nx, ny)
       @.dx = dx
       @.dy = dy
       @.scaleX = if dx > 0 then 1 else -1
 
     swim: ->
-      @.sp = PLAYER_SPEED * 4
       @.is_swim = true
       @.frame = @.team * 5 + 2
       @.tl.delay(SWIM_TIME).then(->
-        @.sp = PLAYER_SPEED
         @.frame = @.team * 5
         @.is_swim = false
       )
+    on_team_color: () ->
+      [mx, my] = get_map_pos(@.x, @.y, @.width)
+      baseMap[my][mx] == @.team + 1
+
 
   game.onload = ->
     # create liquid image
@@ -160,15 +165,25 @@ $ ->
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
 
+  fill_pos_circle = (mx, my, team, r) ->
+    mr = Math.floor(r / MAP_SIZE)
+    for j in [-mr..mr]
+      for i in [-mr..mr]
+        if j * j + i * i > mr * mr
+          continue
+        fill_map(mx + i, my + j, team)
+    map.loadData(baseMap)
+
   fill_pos = (mx, my, team, mr = 1) ->
     for j in [-mr..mr]
       for i in [-mr..mr]
         fill_map(mx + i, my + j, team)
-
     map.loadData(baseMap)
 
   fill_map = (mx, my, team) ->
-    baseMap[ElzupUtils.clamp(my, MAP_HEIGHT)][ElzupUtils.clamp(mx, MAP_WIDTH)] = team
+    if ElzupUtils.clamp(my, MAP_HEIGHT - 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH - 1) != mx
+      return
+    baseMap[my][mx] = team
 
   get_map_pos = (sx, sy, r = 0) ->
     mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_SIZE), MAP_WIDTH)
