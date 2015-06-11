@@ -18,8 +18,7 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
-  # TODO: set to 60?
-  GAME_TIME_LIMIT_SEC = 20
+  GAME_TIME_LIMIT_SEC = 60
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
 
@@ -205,6 +204,7 @@ $ ->
   game.start()
 
   game_init = ->
+    game.rootScene.remove()
     game_term = GameTerm.ready
     # create liquid image
     player_group = new Group()
@@ -232,10 +232,11 @@ $ ->
       #   timer_label.tl.scaleTo(1, 1).scaleTo(1.5, 1.5, FPS * 0.6).delay(FPS * 0.4)
       if (time == GAME_TIME_PRE_FINISH)
         score_cover.tl.scaleTo(1.0, 1.0, FPS * GAME_TIME_PRE_FINISH)
+          .delay(FPS * 1).scaleTo(0, 1.0, FPS * 3).then ->
+            game.rootScene.removeChild(@)
+
       if (time == 0)
         game_result()
-
-      # TODO: game finish
 
     score_bar = new Sprite(MAP_WIDTH, FOOTER_HEIGHT)
     score_bar.image = new Surface(MAP_WIDTH, FOOTER_HEIGHT)
@@ -271,9 +272,14 @@ $ ->
 
   game_result = ->
     game_term = GameTerm.result
-    score_cover.tl.delay(FPS * 1).scaleTo(0, 1.0, FPS * 3)
 
-  game_result = ->
+    btn = new Button("Ready");
+    margin = 20
+    btn.moveTo(margin, MAP_HEIGHT + margin)
+    btn.ontouchstart = ->
+      game.rootScene.removeChild(@)
+      game_init()
+    game.rootScene.addChild(btn)
 
   create_map = ->
     baseMap = [0...MAP_HEIGHT_NUM]
@@ -375,15 +381,16 @@ $ ->
       return
     rate = data.radius / RADIUS_ACTION
     console.log(rate)
-    if player.type == 0 && RADIUS_ACTION < data.radius
+    if player.type == 0 and RADIUS_ACTION < data.radius and game_term == GameTerm.progress
       player.walk(data.dx, data.dy)
       player.shot(rate)
     else
+      rate = ElzupUtils.clamp(rate, 1.5, 1.0)
       player.walk(data.dx * rate, data.dy * rate)
 
   socket.on 'shake', (data) ->
     player = get_player(data.id)
-    if !player?
+    if !player? or game_term != GameTerm.progress
       return
     console.log(player.type)
     switch player.type
@@ -391,12 +398,11 @@ $ ->
         player.swim()
       when 1
         player.supershot()
-    console.log(data)
 
   socket.on 'count', (data) ->
     $count = $('#count')
     $count.text(data.count)
-    console.log(data)
+    # console.log(data)
 
   socket.on 'createuser', (data) ->
     console.log('create user')
