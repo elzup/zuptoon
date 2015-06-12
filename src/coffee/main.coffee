@@ -20,7 +20,7 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
-  GAME_TIME_LIMIT_SEC = 1000
+  GAME_TIME_LIMIT_SEC = 60
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
@@ -68,6 +68,7 @@ $ ->
   game_term = null
 
   player_group = null
+  player_list = null
   liquid_group = null
 
   liquid_sprite = null
@@ -140,7 +141,7 @@ $ ->
     col: null
     last_shot_frame: 0
     is_swim: false
-    id_die: false
+    is_die: false
     initialize: (id, team, type) ->
       enchant.Sprite.call(@, 32, 32)
       @.id = id
@@ -153,6 +154,7 @@ $ ->
       @.col = COL_LIB[team]
       @._style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
+      player_list.push(@)
     supershot: ()->
       if @.is_die
         return
@@ -203,12 +205,12 @@ $ ->
       console.log('die start')
       @.is_die = true
       @.opacity = 0.5
-      @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, FPS).delay(FPS).and()
-        .repeat(->
-          @.opacity = @.age % 2
-        , FPS).then(->
+      @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, 20)
+        .then( ->
           @.opacity = 1.0
           @.is_die = false
+          console.log('die end')
+          console.log('die end')
           console.log('die end')
         )
     ox: ->
@@ -227,6 +229,7 @@ $ ->
     # create liquid image
     player_group = new Group()
     liquid_group = new Group()
+    player_list = []
     # player は手前
 
     map = new Map(MAP_MATRIX_SIZE, MAP_MATRIX_SIZE)
@@ -361,7 +364,7 @@ $ ->
     context.fill()
 
   get_player = (id) ->
-    for player in player_group.childNodes
+    for player in player_list
       if player.id == id
         return player
         break
@@ -369,7 +372,10 @@ $ ->
 
   kill_player_circle = (x, y, r, team) ->
     r2 = r * r
-    for player in player_group.childNodes
+    for player in player_group
+      console.log('c player')
+      console.log(player.id)
+      console.log(player.is_die)
       if player.team == team or player.is_die
         continue
       dx = player.ox() - x
@@ -439,10 +445,11 @@ $ ->
     console.log('create user')
     console.log(data)
     player = new Player(data.id, parseInt(data.team), parseInt(data.type))
-    player_group.addChild(player)
 
   socket.on 'removeuser', (data) ->
     console.log('delete user')
     console.log(data)
     player = get_player(data.id)
     player_group.removeChild(player)
+    i = player_list.indexOf(player)
+    player_list.splice(i, 1)
