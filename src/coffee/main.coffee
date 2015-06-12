@@ -9,7 +9,6 @@ $ ->
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
   SHOT_RAPID_DELAY = FPS / 5 # 0.2秒
-  RADIUS_ACTION = 160 * 0.4
   COL_LIB = ['red', 'yellow', 'blue', 'green'];
 
   QUICK_DEBUG = 0
@@ -27,8 +26,7 @@ $ ->
     left: 0
     right: 1
 
-  SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
-
+  # SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
   INIT_POS = [
     {
       x: MAP_WIDTH / 7
@@ -63,7 +61,6 @@ $ ->
   # map view type
   # 0: graphical
   # 1: matrix_fill
-  # TODO: enum constains
   ShowType =
     graphical: 0
     matrix_fill: 1
@@ -80,7 +77,6 @@ $ ->
   game_term = null
 
   player_group = null
-  player_list = null
   liquid_group = null
 
   liquid_sprite = null
@@ -162,8 +158,8 @@ $ ->
       )
       r = @.width * @.scaler / 2
       kill_player_circle(@.x, @.y, r, @.team)
-      # DEBUG: kill する範囲を黒で塗りつぶす debug で大事
-      # draw_circle(@.ox(), @.oy(), r, 'black', true)
+  # DEBUG: kill する範囲を黒で塗りつぶす debug で大事
+  # draw_circle(@.ox(), @.oy(), r, 'black', true)
 
     r: ->
       @.width * @.scaleX / 2
@@ -249,7 +245,7 @@ $ ->
     swim_end: ->
       @.frame = @.team * 5
       @.is_swim = false
-    # 2つのメソッドまとめる
+  # 2つのメソッドまとめる
     on_team_color: ->
       [mx, my] = get_map_pos(@.ox(), @.oy())
       baseMap[my][mx] == @.team + 1
@@ -262,9 +258,9 @@ $ ->
       @.is_die = true
       @.tl.clear()
       @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, FPS / 2)
-      .delay(FPS).and().repeat( ->
+      .delay(FPS).and().repeat(->
         @.opacity = @.age % 2
-      , FPS).then( ->
+      , FPS).then(->
         @.opacity = 1.0
         @.is_die = false
       )
@@ -285,7 +281,6 @@ $ ->
     # create liquid image
     player_group = new Group()
     liquid_group = new Group()
-    player_list = []
     # player は手前
 
     map = new Map(MAP_MATRIX_SIZE, MAP_MATRIX_SIZE)
@@ -309,8 +304,8 @@ $ ->
       #   timer_label.tl.scaleTo(1, 1).scaleTo(1.5, 1.5, FPS * 0.6).delay(FPS * 0.4)
       if (time == GAME_TIME_PRE_FINISH)
         score_cover.tl.scaleTo(1.0, 1.0, FPS * GAME_TIME_PRE_FINISH)
-          .delay(FPS * 1).scaleTo(0, 1.0, FPS * 3).then ->
-            game.rootScene.removeChild(@)
+        .delay(FPS).scaleTo(0, 1.0, FPS * 3).then ->
+          game.rootScene.removeChild(@)
 
       if (time == 0)
         game_result()
@@ -373,7 +368,7 @@ $ ->
     pointer.image = game.assets['/images/item.png']
     pointer.moveTo(x, y)
     game.rootScene.addChild(pointer)
-    pointer.tl.delay(time).then( ->
+    pointer.tl.delay(time).then(->
       game.rootScene.removeChild(@)
     )
 
@@ -406,14 +401,6 @@ $ ->
     # graphical line
     update_score()
 
-
-  fill_pos = (mx, my, team, mr = 1) ->
-    for j in [-mr..mr]
-      for i in [-mr..mr]
-        fill_map(mx + i, my + j, team)
-    if SHOW_TYPE == ShowType.matrix_fill
-      map.loadData(baseMap)
-
   fill_map = (mx, my, team) ->
     if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 2, 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 2, 1) != mx
       return
@@ -433,7 +420,7 @@ $ ->
     [mx, my]
 
   draw_circle = (x, y, r, col, force = false) ->
-    if SHOW_TYPE != ShowType.graphical and ! force
+    if SHOW_TYPE != ShowType.graphical and !force
       return
     context = liquid_sprite.image.context
     context.beginPath()
@@ -443,7 +430,7 @@ $ ->
     context.fill()
 
   get_player = (id) ->
-    for player in player_list
+    for player in player_group.childNodes
       if player.id == id
         return player
         break
@@ -451,14 +438,14 @@ $ ->
 
   kill_player_circle = (x, y, r, team) ->
     r2 = r * r
-    for player in player_list
+    for player in player_group.childNodes
       if player.team == team or player.is_die
         continue
       dx = player.ox() - x
       dy = player.oy() - y
       if dx * dx + dy * dy > r2
         continue
-      fill_pos_circle(player.ox() , player.oy(), 50, team)
+      fill_pos_circle(player.ox(), player.oy(), 50, team)
       player.die()
 
   kill_player_line = (x1, y1, x2, y2, team) ->
@@ -473,7 +460,7 @@ $ ->
         py = y2 + (i / c) * (y1 - y2)
         [mx, my] = get_map_pos(px, py)
         if (-1 <= mx - mpx <= 1 && -1 <= my - mpy <= 1)
-          fill_pos_circle(player.ox() , player.oy(), 50, team)
+          fill_pos_circle(player.ox(), player.oy(), 50, team)
           player.die()
           break
 
@@ -545,14 +532,10 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
-    player = new Player(data.id, parseInt(data.team), parseInt(data.type))
-    player_list.push(player)
+    new Player(data.id, parseInt(data.team), parseInt(data.type))
 
   socket.on 'removeuser', (data) ->
     console.log('delete user')
     console.log(data)
     player = get_player(data.id)
     player_group.removeChild(player)
-    i = player_list.indexOf(player)
-    if i in player_list
-      player_list.splice(i, 1)
