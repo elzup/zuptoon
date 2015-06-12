@@ -180,6 +180,8 @@ $ ->
       # swim モードでかつプレイヤーの位置がチーム色の場合
       if @.is_swim && @.on_team_color()
         sp *= 4
+      else if @.on_enemy_color()
+        sp *= 0.5
       nx = ElzupUtils.clamp(@.x + dx * sp, MAP_WIDTH - @.width)
       ny = ElzupUtils.clamp(@.y + dy * sp, MAP_HEIGHT - @.height)
       @.moveTo(nx, ny)
@@ -199,6 +201,9 @@ $ ->
     on_team_color: ->
       [mx, my] = get_map_pos(@.x, @.y, @.width)
       baseMap[my][mx] == @.team + 1
+    on_enemy_color: ->
+      [mx, my] = get_map_pos(@.x, @.y, @.width)
+      baseMap[my][mx] != 0 and baseMap[my][mx] != @.team + 1
 
     die: ->
       console.log('die start')
