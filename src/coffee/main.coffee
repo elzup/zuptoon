@@ -19,6 +19,21 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
+  BlockType =
+    NONE: 0
+    COL_RED: 1
+    COL_YELLOW: 2
+    COL_BLUE: 3
+    COL_GREEN: 4
+    BLOCK: 8
+    WALL: 32
+
+  Stage =
+    flat: 0
+    blocks: 1
+    bridge: 'stage1.json'
+  STAGE = Stage.blocks
+
   GAME_TIME_LIMIT_SEC = 1000
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
@@ -229,12 +244,24 @@ $ ->
         sp *= 4
       else if @.on_enemy_color()
         sp *= 0.5
-      nx = ElzupUtils.clamp(@.x + dx * sp, MAP_WIDTH - @.width)
-      ny = ElzupUtils.clamp(@.y + dy * sp, MAP_HEIGHT - @.height)
-      @.moveTo(nx, ny)
-      @.dx = dx
-      @.dy = dy
-      @.scaleX = if dx > 0 then 1 else -1
+      # 精度が変わる部分
+      for i in [1..5]
+        nx = ElzupUtils.clamp(@.x + dx * sp / i, MAP_WIDTH - @.width)
+        ny = ElzupUtils.clamp(@.y + dy * sp / i, MAP_HEIGHT - @.height)
+        safe = true
+        for p in @.end_points(nx, ny)
+          [px, py] = p
+          block_type = map_type(px, py)
+          console.log(block_type)
+          if is_block(block_type)
+            console.log(i)
+            safe = false
+        if !safe
+          continue
+        @.moveTo(nx, ny)
+        @.dx = dx
+        @.dy = dy
+        @.scaleX = if dx > 0 then 1 else -1
 
     swim: ->
       if @.is_die
@@ -247,10 +274,10 @@ $ ->
       @.is_swim = false
   # 2つのメソッドまとめる
     on_team_color: ->
-      [mx, my] = get_map_pos(@.ox(), @.oy())
+      [mx, my] = map_pos(@.ox(), @.oy())
       baseMap[my][mx] == @.team + 1
     on_enemy_color: ->
-      [mx, my] = get_map_pos(@.ox(), @.oy())
+      [mx, my] = map_pos(@.ox(), @.oy())
       baseMap[my][mx] != 0 and baseMap[my][mx] != @.team + 1
 
     die: ->
@@ -269,6 +296,15 @@ $ ->
       @.x + @.width / 2
     oy: ->
       @.y + @.height / 2
+
+    end_point: (vx, vy, cx = @.x, cy = @.y) ->
+      px = if vx < 0 then cx else cx + @.width
+      py = if vy < 0 then cy else cy + @.height
+      [px, py]
+
+    end_points: (cx = @.x, cy = @.y) ->
+      [[cx, cy], [cx + @.width, cy], [cx, cy + @.height], [cx + @.width, cy + @.height]]
+
 
   game.onload = ->
     game_init()
@@ -354,13 +390,19 @@ $ ->
     game.rootScene.addChild(btn)
 
   create_map = ->
-    baseMap = [0...MAP_HEIGHT_NUM]
-    for i in baseMap
-      baseMap[i] = [0...MAP_WIDTH_NUM]
-      for j in baseMap[i]
-        baseMap[i][j] = 0
-        if i == 0 or i == MAP_HEIGHT_NUM - 1 or j == 0 or j == MAP_WIDTH_NUM - 1
-          baseMap[i][j] = 32
+    baseMap = null
+    if STAGE == Stage.flat or STAGE == Stage.blocks
+      baseMap = [0...MAP_HEIGHT_NUM]
+      for j in baseMap
+        baseMap[j] = [0...MAP_WIDTH_NUM]
+        for i in baseMap[j]
+          baseMap[j][i] = 0
+          span = 30
+          col = 5
+          if STAGE == Stage.blocks and (i + 15) % span < col and (j + 15) % span < col
+            baseMap[j][i] = BlockType.BLOCK
+          if j == 0 or j == MAP_HEIGHT_NUM - 1 or i == 0 or i == MAP_WIDTH_NUM - 1
+            baseMap[j][i] = BlockType.WALL
     baseMap
 
   draw_pointer = (x, y, time) ->
@@ -374,7 +416,7 @@ $ ->
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
-    [mx, my] = get_map_pos(x, y)
+    [mx, my] = map_pos(x, y)
     mr = Math.floor(r / MAP_MATRIX_SIZE)
     mr2 = mr * mr
     for j in [-mr..mr]
@@ -392,7 +434,7 @@ $ ->
     for i in [0...c]
       px = x2 + (i / c) * (x1 - x2)
       py = y2 + (i / c) * (y1 - y2)
-      [mx, my] = get_map_pos(px, py)
+      [mx, my] = map_pos(px, py)
       for dx in [-1...2]
         for dy in [-1...2]
           fill_map(mx + dx, my + dy, team)
@@ -414,10 +456,20 @@ $ ->
       return
     score[pre - 1] -= 1
 
-  get_map_pos = (sx, sy, r = 0) ->
+  map_pos = (sx, sy, r = 0) ->
     mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_MATRIX_SIZE), MAP_WIDTH_NUM)
     my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM)
     [mx, my]
+
+  map_type = (sx, sy) ->
+    [mx, my] = map_pos(sx, sy)
+    baseMap[my][mx]
+
+  is_player_block_type = (type) ->
+    1 <= type <= 4
+
+  is_block = (type) ->
+    type == BlockType.BLOCK or type == BlockType.WALL
 
   draw_circle = (x, y, r, col, force = false) ->
     if SHOW_TYPE != ShowType.graphical and !force
@@ -454,11 +506,11 @@ $ ->
     for player in player_group.childNodes
       if player.team == team or player.is_die
         continue
-      [mpx, mpy] = get_map_pos(player.ox(), player.oy())
+      [mpx, mpy] = map_pos(player.ox(), player.oy())
       for i in [0...c]
         px = x2 + (i / c) * (x1 - x2)
         py = y2 + (i / c) * (y1 - y2)
-        [mx, my] = get_map_pos(px, py)
+        [mx, my] = map_pos(px, py)
         if (-1 <= mx - mpx <= 1 && -1 <= my - mpy <= 1)
           fill_pos_circle(player.ox(), player.oy(), 50, team)
           player.die()
