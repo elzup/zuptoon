@@ -50,17 +50,11 @@ $ ->
 
     game.rootScene.addEventListener Event.ENTER_FRAME, () ->
       if is_touch_l
-        dx = ex_l - CON_X
-        dy = ey_l - CON_Y
-        rad = get_rad(dx, dy)
-        va = ElzupUtils.vec_maguniture(dx, dy)
-        emit_move(rad, va, Controller.left)
+        [dx, dy, rad, pow] = get_vec(ex_l, ey_l, Controller.left)
+        emit_move(rad, pow, Controller.left)
       if is_touch_r
-        dx = ex_r - CON_X2
-        dy = ey_r - CON_Y2
-        rad = get_rad(dx, dy)
-        va = ElzupUtils.vec_maguniture(dx, dy)
-        emit_move(rad, va, Controller.right)
+        [dx, dy, rad, pow] = get_vec(ex_r, ey_r, Controller.right)
+        emit_move(rad, pow, Controller.right)
 
     game.rootScene.addEventListener Event.TOUCH_START, (e) ->
       if e.x < game.width / 2
@@ -77,6 +71,9 @@ $ ->
         is_touch_l = false
       else
         is_touch_r = false
+        [dx, dy, rad, pow] = get_vec(e.x, e.y, Controller.right)
+        if pow > 30
+          emit_leave(rad, pow)
 
     game.rootScene.addEventListener Event.TOUCH_MOVE, (e) ->
       if e.x < game.width / 2
@@ -87,6 +84,20 @@ $ ->
         ey_r = e.y
 
   game.start()
+
+  get_vec = (x, y, con) ->
+    con_x = CON_X
+    con_y = CON_Y
+    if con == Controller.right
+      con_x = CON_X2
+      con_y = CON_Y2
+    dx = x - con_x
+    dy = y - con_y
+    rad = get_rad(dx, dy)
+    va = ElzupUtils.vec_maguniture(dx, dy)
+    rad = parseInt(rad * 100) / 100
+    pow = ElzupUtils.clamp(parseInt(va), 100)
+    return [dx, dy, rad, pow]
 
   get_rad = (x, y) ->
     Math.atan2(y, x)
@@ -108,15 +119,18 @@ $ ->
       act: 'swim'
 
   emit_move = (rad, pow, con) ->
-    # varidate
-    rad = parseInt(rad * 100) / 100
-    pow = ElzupUtils.clamp(parseInt(pow), 100)
-    console.log(rad, pow, con)
-
     socket.emit 'move',
       rad: rad
       pow: pow
       con: con
+    console.log(rad, pow, con)
+
+  emit_leave = (rad, pow)->
+    console.log('emit leave')
+    console.log(rad, pow)
+    socket.emit 'leave',
+      rad: rad
+      pow: pow
 
   # 新規ユーザ作成
   $(@).gShake -> emit_shake()

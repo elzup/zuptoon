@@ -45,12 +45,19 @@ $ ->
     }
   ]
 
+  V_SHOT = 40.0
+  V_SUPER_SHOT = 60.0
+
   SWIM_TIME = FPS * 2
   PLAYER_SPEED = 2.0
   GameTerm =
     ready: 0
     progress: 1
     result: 2
+
+  PlayerType =
+    gun: 0
+    shotgun: 1
 
   # map view type
   # 0: graphical
@@ -145,7 +152,7 @@ $ ->
     dx: 0
     dy: 0
     team: 0
-    type: 0
+    type: PlayerType.gun
     col: null
     last_shot_frame: 0
     is_swim: false
@@ -163,13 +170,12 @@ $ ->
       @.col = COL_LIB[team]
       @._style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
-    supershot: ()->
+    supershot: (x, y)->
       if @.is_die
         return
-      # TODO: 三方向ショット
-      new Liquid(@.x, @.y, @.dx, @.dy, @.team, 60.0, 4)
+      new Liquid(@.x, @.y, x, y, @.team, V_SUPER_SHOT, 4)
 
-    shot: (x, y, rad)->
+    shot: (x, y)->
       if @.is_die
         return
       frame = game.frame
@@ -180,8 +186,14 @@ $ ->
         @.swim_end()
       # ランダムでずらす
       rr = Math.random() * 0.5
-      new Liquid(@.x, @.y, x, y, @.team, 40.0, 3.0 + rr)
+      new Liquid(@.x, @.y, x, y, @.team, V_SHOT, 3.0 + rr)
       @.last_shot_frame = frame
+
+    update_pointer: (x, y)->
+      px = @x + x * V_SUPER_SHOT
+      py = @y + y * V_SUPER_SHOT
+      draw_pointer(px, py, FPS * 0.2)
+
 
     walk: (dx, dy) ->
       if @.is_die
@@ -208,11 +220,12 @@ $ ->
     swim_end: ->
       @.frame = @.team * 5
       @.is_swim = false
+    # 2つのメソッドまとめる
     on_team_color: ->
-      [mx, my] = get_map_pos(@.x, @.y, @.width)
+      [mx, my] = get_map_pos(@.ox(), @.oy())
       baseMap[my][mx] == @.team + 1
     on_enemy_color: ->
-      [mx, my] = get_map_pos(@.x, @.y, @.width)
+      [mx, my] = get_map_pos(@.ox(), @.oy())
       baseMap[my][mx] != 0 and baseMap[my][mx] != @.team + 1
 
     die: ->
@@ -327,7 +340,6 @@ $ ->
     baseMap
 
   draw_pointer = (x, y, time) ->
-    console.log('a 1')
     pointer = new Sprite(16, 16)
     pointer.image = game.assets['/images/item.png']
     pointer.moveTo(x, y)
@@ -335,7 +347,6 @@ $ ->
     pointer.tl.delay(time).then( ->
       game.rootScene.removeChild(@)
     )
-    console.log('a e')
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
@@ -442,17 +453,24 @@ $ ->
       else
         # (data.pow - 30) / 70 * 0.4 + 0.8
         rate = (data.pow - 30) * 4 / 700 + 0.8
-        player.shot(x * rate, y * rate)
+        switch player.type
+          when PlayerType.gun
+            player.shot(x * rate, y * rate)
+          when PlayerType.shotgun
+            player.update_pointer(x * rate, y * rate)
 
   socket.on 'shake', (data) ->
+    # TODO: create action
+    # player = get_player(data.id)
+
+  socket.on 'leave', (data) ->
     player = get_player(data.id)
-    if !player? or game_term != GameTerm.progress
-      return
-    switch player.type
-      when 0
-        player.swim()
-      when 1
-        player.supershot()
+    console.log(player.type)
+    if player.type == PlayerType.shotgun
+      rate = data.pow * 0.005 + 1
+      [x, y] = to_xy(data.rad)
+      player.supershot(x * rate, y * rate)
+      console.log("super shot")
 
   socket.on 'count', (data) ->
     $count = $('#count')
@@ -462,9 +480,7 @@ $ ->
     console.log('create user')
     console.log(data)
     player = new Player(data.id, parseInt(data.team), parseInt(data.type))
-    console.log(player_list)
     player_list.push(player)
-    console.log(player_list)
 
   socket.on 'removeuser', (data) ->
     console.log('delete user')
@@ -473,6 +489,4 @@ $ ->
     player_group.removeChild(player)
     i = player_list.indexOf(player)
     if i in player_list
-      console.log(player_list)
       player_list.splice(i, 1)
-      console.log(player_list)
