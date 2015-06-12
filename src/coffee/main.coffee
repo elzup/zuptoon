@@ -391,13 +391,16 @@ $ ->
     [x, y] = to_xy(data.rad)
     # 左コントローラは移動
     if data.con == Controller.left
-      player.walk(x, y)
+      rate = data.pow * 0.005 + 1
+      player.walk(x * rate, y * rate)
     else
       # 中心付近のタッチは swim
       if data.pow < 30
         player.swim()
       else
-        player.shot(x, y)
+        # (data.pow - 30) / 70 * 0.4 + 0.8
+        rate = (data.pow - 30) * 4 / 700 + 0.8
+        player.shot(x * rate, y * rate)
 
   socket.on 'shake', (data) ->
     player = get_player(data.id)
