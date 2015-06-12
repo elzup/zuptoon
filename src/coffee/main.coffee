@@ -46,7 +46,7 @@ $ ->
   ]
 
   V_SHOT = 40.0
-  V_SUPER_SHOT = 60.0
+  V_SUPER_SHOT = 100.0
 
   SWIM_TIME = FPS * 2
   PLAYER_SPEED = 2.0
@@ -109,11 +109,16 @@ $ ->
     team: 0
     type: 0
     scaler: 2.0
-    initialize: (x, y, vx, vy, team, vspeed = 30.0, scaler = 2.0, type = LiquidType.simple) ->
+    vx: 0
+    vy: 0
+
+    initialize: (x, y, vx, vy, team, scaler = 2.0, type = LiquidType.simple) ->
       enchant.Sprite.call(this, 16, 16)
       spr_count += 1
       @.sx = x
       @.sy = y
+      @.vx = vx
+      @.vy = vy
       @.image = game.assets['/images/icon0.png']
       @.scaler = scaler
       @.type = type
@@ -121,18 +126,23 @@ $ ->
       @.frame = 12
       @._style.zIndex = -SPR_Z_SHIFT
       @.team = team
+
+    start: ->
       # ランダムでずらす
       rx = (Math.random() - 0.5) * 16
       ry = (Math.random() - 0.5) * 16
-
-      px = vx * vspeed + rx
-      py = vy * vspeed + ry
-      @.tl.moveBy(px, py, 8).then -> @.pop()
-      draw_pointer(@.x + px, @.y + py, FPS)
+      px = @.vx + rx
+      py = @.vy + ry
+      sp = 8
+      if @.type == LiquidType.line
+        fill_pos_line(@.ox(), @.oy(), @.ox() + px, @.oy() + py, @.team)
+      @.tl.moveBy(px, py, sp).then -> @.pop()
+      # if @.type == LiquidType.simple
+      #   draw_pointer(@.x + px, @.y + py, FPS)
       liquid_group.addChild(@)
 
     pop: ->
-      @.scale(2.0, 2.0)
+      @.scale(@.scaler * 0.8, @.scaler * 0.8)
       sfc = new Surface(16, 16)
       ctx = sfc.context
       ctx.beginPath()
@@ -142,12 +152,8 @@ $ ->
       sfc.context.fill()
       @.image = sfc
       delay = FPS * 0.5
-      if  @.type == LiquidType.line
-        delay = FPS * 0.1
       @.tl.scaleTo(@.scaler, @.scaler, FPS / 2).then(->
         fill_pos_circle(@.ox(), @.oy(), @.r(), @.team)
-        if  @.type == LiquidType.line
-          fill_pos_line(@.sx, @.sy, @.x, @.y, @.team)
         @.parentNode.removeChild(@)
       )
       r = @.width * @.scaler / 2
@@ -189,7 +195,9 @@ $ ->
     supershot: (x, y)->
       if @.is_die
         return
-      new Liquid(@.x, @.y, x, y, @.team, V_SUPER_SHOT, 1, LiquidType.line)
+      liquid = new Liquid(@.x, @.y, x, y, @.team, 1, LiquidType.line)
+      console.log(liquid)
+      liquid.start()
 
     shot: (x, y)->
       if @.is_die
@@ -202,13 +210,14 @@ $ ->
         @.swim_end()
       # ランダムでずらす
       rr = Math.random() * 0.5
-      new Liquid(@.x, @.y, x, y, @.team, V_SHOT, 3.0 + rr)
+      liquied = new Liquid(@.x, @.y, x, y, @.team, 3.0 + rr)
+      liquied.start()
       @.last_shot_frame = frame
 
     update_pointer: (x, y)->
-      px = @x + x * V_SUPER_SHOT
-      py = @y + y * V_SUPER_SHOT
-      draw_pointer(px, py, FPS * 0.2)
+      px = @x + x
+      py = @y + y
+      draw_pointer(px, py, 3)
 
 
     walk: (dx, dy) ->
@@ -382,14 +391,12 @@ $ ->
   fill_pos_line = (x1, y1, x2, y2, team) ->
     c = 10
     for i in [0...c]
-      px = x1 + (i / c) * (x2 - x1)
-      py = y1 + (i / c) * (y2 - y1)
+      px = x2 + (i / c) * (x1 - x2)
+      py = y2 + (i / c) * (y1 - y2)
       [mx, my] = get_map_pos(px, py)
-      fill_map(mx, my, team)
-      fill_map(mx + 1, my, team)
-      fill_map(mx - 1, my, team)
-      fill_map(mx, my + 1, team)
-      fill_map(mx, my - 1, team)
+      for dx in [-1...2]
+        for dy in [-1...2]
+          fill_map(mx + dx, my + dy, team)
     # NOTE:
     if SHOW_TYPE == ShowType.matrix_fill
       console.log('skip')
@@ -451,6 +458,10 @@ $ ->
       fill_pos_circle(player.ox() , player.oy(), 50, team)
       player.die()
 
+  kill_player_line = (x, y, r, team) ->
+    # TODO:
+    console.log('line kill')
+
   update_score = ->
     max = Math.max.apply(null, score)
     context = score_bar.image.context
@@ -489,8 +500,12 @@ $ ->
         rate = (data.pow - 30) * 4 / 700 + 0.8
         switch player.type
           when PlayerType.gun
+            rate *= V_SHOT
             player.shot(x * rate, y * rate)
+            player.update_pointer(x * rate, y * rate)
           when PlayerType.rifle
+            rate *= V_SUPER_SHOT
+            player.shot(x * rate, y * rate)
             player.update_pointer(x * rate, y * rate)
 
   socket.on 'shake', (data) ->
@@ -503,6 +518,8 @@ $ ->
     if player.type == PlayerType.rifle
       rate = data.pow * 0.005 + 1
       [x, y] = to_xy(data.rad)
+      if game_term != GameTerm.progress
+        return
       player.supershot(x * rate, y * rate)
       console.log("super shot")
 
