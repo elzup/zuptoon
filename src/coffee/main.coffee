@@ -64,7 +64,7 @@ $ ->
 
   # core setting
   game = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
-  game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png')
+  game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png', '/images/item.png')
   game.fps = FPS
 
   # global
@@ -106,7 +106,11 @@ $ ->
       # ランダムでずらす
       rx = (Math.random() - 0.5) * 16
       ry = (Math.random() - 0.5) * 16
-      @.tl.moveBy(vx * vspeed + rx, vy * vspeed + ry, 8).then -> @.pop()
+
+      px = vx * vspeed + rx
+      py = vy * vspeed + ry
+      @.tl.moveBy(px, py, 8).then -> @.pop()
+      draw_pointer(@.x + px, @.y + py, FPS)
       liquid_group.addChild(@)
 
     pop: ->
@@ -146,6 +150,7 @@ $ ->
     last_shot_frame: 0
     is_swim: false
     is_die: false
+    pointer: null
     initialize: (id, team, type) ->
       enchant.Sprite.call(@, 32, 32)
       @.id = id
@@ -163,7 +168,8 @@ $ ->
         return
       # TODO: 三方向ショット
       new Liquid(@.x, @.y, @.dx, @.dy, @.team, 60.0, 4)
-    shot: (x, y)->
+
+    shot: (x, y, rad)->
       if @.is_die
         return
       frame = game.frame
@@ -320,6 +326,16 @@ $ ->
           baseMap[i][j] = 32
     baseMap
 
+  draw_pointer = (x, y, time) ->
+    console.log('a 1')
+    pointer = new Sprite(16, 16)
+    pointer.image = game.assets['/images/item.png']
+    pointer.moveTo(x, y)
+    game.rootScene.addChild(pointer)
+    pointer.tl.delay(time).then( ->
+      game.rootScene.removeChild(@)
+    )
+    console.log('a e')
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
