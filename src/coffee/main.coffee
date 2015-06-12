@@ -20,7 +20,7 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
-  GAME_TIME_LIMIT_SEC = 10000
+  GAME_TIME_LIMIT_SEC = 60
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
@@ -57,6 +57,7 @@ $ ->
 
   PlayerType =
     gun: 0
+    rifle: 1
     shotgun: 1
 
   # map view type
@@ -98,14 +99,24 @@ $ ->
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
 
+  LiquidType =
+    simple: 0
+    line: 1
+
   Liquid = enchant.Class.create enchant.Sprite,
+    sx: 0
+    sy: 0
     team: 0
+    type: 0
     scaler: 2.0
-    initialize: (x, y, vx, vy, team, vspeed = 30.0, scaler = 2.0) ->
+    initialize: (x, y, vx, vy, team, vspeed = 30.0, scaler = 2.0, type = LiquidType.simple) ->
       enchant.Sprite.call(this, 16, 16)
       spr_count += 1
+      @.sx = x
+      @.sy = y
       @.image = game.assets['/images/icon0.png']
       @.scaler = scaler
+      @.type = type
       @.moveTo(x + @.width / 2, y + @.height / 2)
       @.frame = 12
       @._style.zIndex = -SPR_Z_SHIFT
@@ -130,8 +141,13 @@ $ ->
       sfc.context.fillStyle = COL_LIB[@.team]
       sfc.context.fill()
       @.image = sfc
+      delay = FPS * 0.5
+      if  @.type == LiquidType.line
+        delay = FPS * 0.1
       @.tl.scaleTo(@.scaler, @.scaler, FPS / 2).then(->
         fill_pos_circle(@.ox(), @.oy(), @.r(), @.team)
+        if  @.type == LiquidType.line
+          fill_pos_line(@.sx, @.sy, @.x, @.y, @.team)
         @.parentNode.removeChild(@)
       )
       r = @.width * @.scaler / 2
@@ -173,7 +189,7 @@ $ ->
     supershot: (x, y)->
       if @.is_die
         return
-      new Liquid(@.x, @.y, x, y, @.team, V_SUPER_SHOT, 4)
+      new Liquid(@.x, @.y, x, y, @.team, V_SUPER_SHOT, 1, LiquidType.line)
 
     shot: (x, y)->
       if @.is_die
@@ -363,6 +379,24 @@ $ ->
     # NOTE: マップに対する変更箇所全てに必要
     update_score()
 
+  fill_pos_line = (x1, y1, x2, y2, team) ->
+    c = 10
+    for i in [0...c]
+      px = x1 + (i / c) * (x2 - x1)
+      py = y1 + (i / c) * (y2 - y1)
+      [mx, my] = get_map_pos(px, py)
+      fill_map(mx, my, team)
+      fill_map(mx + 1, my, team)
+      fill_map(mx - 1, my, team)
+      fill_map(mx, my + 1, team)
+      fill_map(mx, my - 1, team)
+    # NOTE:
+    if SHOW_TYPE == ShowType.matrix_fill
+      console.log('skip')
+      # graphical line
+    update_score()
+
+
   fill_pos = (mx, my, team, mr = 1) ->
     for j in [-mr..mr]
       for i in [-mr..mr]
@@ -456,7 +490,7 @@ $ ->
         switch player.type
           when PlayerType.gun
             player.shot(x * rate, y * rate)
-          when PlayerType.shotgun
+          when PlayerType.rifle
             player.update_pointer(x * rate, y * rate)
 
   socket.on 'shake', (data) ->
@@ -466,7 +500,7 @@ $ ->
   socket.on 'leave', (data) ->
     player = get_player(data.id)
     console.log(player.type)
-    if player.type == PlayerType.shotgun
+    if player.type == PlayerType.rifle
       rate = data.pow * 0.005 + 1
       [x, y] = to_xy(data.rad)
       player.supershot(x * rate, y * rate)
