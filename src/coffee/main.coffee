@@ -43,7 +43,7 @@ $ ->
     }
   ]
 
-  SWIM_TIME = FPS * 0.8 # 0.8秒
+  SWIM_TIME = FPS * 2
   PLAYER_SPEED = 1.0
   GameTerm =
     ready: 0
@@ -154,8 +154,10 @@ $ ->
         return
       frame = game.frame
       # 即連射, swim中 禁止
-      if frame - @.last_shot_frame < SHOT_RAPID_DELAY || @.is_swim
+      if frame - @.last_shot_frame < SHOT_RAPID_DELAY
         return
+      if @.is_swim
+        @.swim_end()
       # ランダムでずらす
       rr = Math.random() * 0.5
       new Liquid(@.x, @.y, x, y, @.team, 40.0, 3.0 + rr)
@@ -180,10 +182,10 @@ $ ->
         return
       @.is_swim = true
       @.frame = @.team * 5 + 2
-      @.tl.delay(SWIM_TIME).then(->
-        @.frame = @.team * 5
-        @.is_swim = false
-      )
+      @.tl.delay(SWIM_TIME).then(@.swim_end)
+    swim_end: ->
+      @.frame = @.team * 5
+      @.is_swim = false
     on_team_color: ->
       [mx, my] = get_map_pos(@.x, @.y, @.width)
       baseMap[my][mx] == @.team + 1
@@ -365,7 +367,6 @@ $ ->
       player.die()
 
   update_score = ->
-    console.log(score)
     max = Math.max.apply(null, score)
     context = score_bar.image.context
     context.beginPath()
