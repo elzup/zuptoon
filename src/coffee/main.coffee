@@ -86,7 +86,6 @@ $ ->
   socket_url = 'http://192.168.1.50'
   socket = io.connect socket_url
 
-
   Liquid = enchant.Class.create enchant.Sprite,
     team: 0
     scaler: 2.0
@@ -116,15 +115,20 @@ $ ->
       sfc.context.fill()
       @.image = sfc
       @.tl.scaleTo(@.scaler, @.scaler, FPS / 2).then(->
-        fill_pos_circle(@.x + @.width / 2, @.y + @.width / 2, @.r(), @.team)
+        fill_pos_circle(@.ox(), @.oy(), @.r(), @.team)
         @.parentNode.removeChild(@)
       )
-      r = @.r()
       r = @.width * @.scaler / 2
       kill_player_circle(@.x, @.y, r, @.team)
+      # DEBUG: kill する範囲を黒で塗りつぶす debug で大事
+      # draw_circle(@.ox(), @.oy(), r, 'black', true)
+
     r: ->
       @.width * @.scaleX / 2
-
+    ox: ->
+      @.x + @.width / 2
+    oy: ->
+      @.y + @.height / 2
 
   Player = enchant.Class.create enchant.Sprite,
     id: null
@@ -207,7 +211,10 @@ $ ->
           @.is_die = false
           console.log('die end')
         )
-
+    ox: ->
+      @.x + @.width / 2
+    oy: ->
+      @.y + @.height / 2
 
   game.onload = ->
     game_init()
@@ -343,8 +350,8 @@ $ ->
     my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM)
     [mx, my]
 
-  draw_circle = (x, y, r, col) ->
-    if SHOW_TYPE != 0
+  draw_circle = (x, y, r, col, force = false) ->
+    if SHOW_TYPE != 0 and ! force
       return
     context = liquid_sprite.image.context
     context.beginPath()
@@ -365,12 +372,12 @@ $ ->
     for player in player_group.childNodes
       if player.team == team or player.is_die
         continue
-      dx = player.x - x
-      dy = player.y - y
+      dx = player.ox() - x
+      dy = player.oy() - y
       if dx * dx + dy * dy > r2
         continue
       console.log('k ' + player)
-      fill_pos_circle(player.x + player.width / 2, player.y + player.height / 2, 50, team)
+      fill_pos_circle(player.ox() , player.oy(), 50, team)
       console.log(team + ' => ' + player.id)
       player.die()
 
