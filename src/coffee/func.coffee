@@ -18,3 +18,4 @@ class @ElzupUtils
       [key, val] = v.split("=")
       params[key] = decodeURIComponent(val)
     params
+

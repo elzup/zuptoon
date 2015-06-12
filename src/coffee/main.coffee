@@ -20,7 +20,7 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
-  GAME_TIME_LIMIT_SEC = 60
+  GAME_TIME_LIMIT_SEC = 1000
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
@@ -136,6 +136,8 @@ $ ->
       sp = 8
       if @.type == LiquidType.line
         fill_pos_line(@.ox(), @.oy(), @.ox() + px, @.oy() + py, @.team)
+        kill_player_line(@.ox(), @.oy(), @.ox() + px, @.oy() + py, @.team)
+        sp = 4
       @.tl.moveBy(px, py, sp).then -> @.pop()
       # if @.type == LiquidType.simple
       #   draw_pointer(@.x + px, @.y + py, FPS)
@@ -152,7 +154,9 @@ $ ->
       sfc.context.fill()
       @.image = sfc
       delay = FPS * 0.5
-      @.tl.scaleTo(@.scaler, @.scaler, FPS / 2).then(->
+      if @.type == LiquidType.line
+        delay = FPS * 0.1
+      @.tl.scaleTo(@.scaler, @.scaler, delay).then(->
         fill_pos_circle(@.ox(), @.oy(), @.r(), @.team)
         @.parentNode.removeChild(@)
       )
@@ -457,9 +461,22 @@ $ ->
       fill_pos_circle(player.ox() , player.oy(), 50, team)
       player.die()
 
-  kill_player_line = (x, y, r, team) ->
-    # TODO:
-    console.log('line kill')
+  kill_player_line = (x1, y1, x2, y2, team) ->
+    # NOTE: 軽量化出来そうな処理
+    c = 10
+    for player in player_group.childNodes
+      if player.team == team or player.is_die
+        continue
+      [mpx, mpy] = get_map_pos(player.ox(), player.oy())
+      for i in [0...c]
+        px = x2 + (i / c) * (x1 - x2)
+        py = y2 + (i / c) * (y1 - y2)
+        [mx, my] = get_map_pos(px, py)
+        if (-1 <= mx - mpx <= 1 && -1 <= my - mpy <= 1)
+          fill_pos_circle(player.ox() , player.oy(), 50, team)
+          player.die()
+          break
+
 
   update_score = ->
     max = Math.max.apply(null, score)
