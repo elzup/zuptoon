@@ -56,7 +56,11 @@ $ ->
   # 0: graphical
   # 1: matrix_fill
   # TODO: enum constains
-  SHOW_TYPE = 1
+  ShowType =
+    graphical: 0
+    matrix_fill: 1
+
+  SHOW_TYPE = ShowType.matrix_fill
 
   # core setting
   game = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
@@ -206,7 +210,6 @@ $ ->
       baseMap[my][mx] != 0 and baseMap[my][mx] != @.team + 1
 
     die: ->
-      console.log('die start')
       @.opacity = 0.5
       @.is_die = true
       @.tl.clear()
@@ -216,9 +219,8 @@ $ ->
       , FPS).then( ->
         @.opacity = 1.0
         @.is_die = false
-        console.log('die end')
-        console.log('die end')
       )
+
     ox: ->
       @.x + @.width / 2
     oy: ->
@@ -329,7 +331,7 @@ $ ->
         if j * j + i * i > mr2
           continue
         fill_map(mx + i, my + j, team)
-    if SHOW_TYPE == 1
+    if SHOW_TYPE == ShowType.matrix_fill
       map.loadData(baseMap)
     # NOTE: マップに対する変更箇所全てに必要
     update_score()
@@ -338,7 +340,7 @@ $ ->
     for j in [-mr..mr]
       for i in [-mr..mr]
         fill_map(mx + i, my + j, team)
-    if SHOW_TYPE == 1
+    if SHOW_TYPE == ShowType.matrix_fill
       map.loadData(baseMap)
 
   fill_map = (mx, my, team) ->
@@ -360,7 +362,7 @@ $ ->
     [mx, my]
 
   draw_circle = (x, y, r, col, force = false) ->
-    if SHOW_TYPE != 0 and ! force
+    if SHOW_TYPE != ShowType.graphical and ! force
       return
     context = liquid_sprite.image.context
     context.beginPath()
@@ -379,18 +381,13 @@ $ ->
   kill_player_circle = (x, y, r, team) ->
     r2 = r * r
     for player in player_list
-      console.log('c player')
-      console.log(player.id)
-      console.log(player.is_die)
       if player.team == team or player.is_die
         continue
       dx = player.ox() - x
       dy = player.oy() - y
       if dx * dx + dy * dy > r2
         continue
-      console.log('k ' + player)
       fill_pos_circle(player.ox() , player.oy(), 50, team)
-      console.log(team + ' => ' + player.id)
       player.die()
 
   update_score = ->
@@ -435,7 +432,6 @@ $ ->
     player = get_player(data.id)
     if !player? or game_term != GameTerm.progress
       return
-    console.log(player.type)
     switch player.type
       when 0
         player.swim()
@@ -445,7 +441,6 @@ $ ->
   socket.on 'count', (data) ->
     $count = $('#count')
     $count.text(data.count)
-    # console.log(data)
 
   socket.on 'createuser', (data) ->
     console.log('create user')
