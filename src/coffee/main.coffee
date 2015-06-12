@@ -195,7 +195,7 @@ $ ->
     supershot: (x, y)->
       if @.is_die
         return
-      liquid = new Liquid(@.x, @.y, x, y, @.team, 1, LiquidType.line)
+      liquid = new Liquid(@.x, @.y, x * V_SUPER_SHOT, y * V_SUPER_SHOT, @.team, 1, LiquidType.line)
       console.log(liquid)
       liquid.start()
 
@@ -397,10 +397,9 @@ $ ->
       for dx in [-1...2]
         for dy in [-1...2]
           fill_map(mx + dx, my + dy, team)
-    # NOTE:
     if SHOW_TYPE == ShowType.matrix_fill
-      console.log('skip')
-      # graphical line
+      map.loadData(baseMap)
+    # graphical line
     update_score()
 
 
@@ -505,7 +504,6 @@ $ ->
             player.update_pointer(x * rate, y * rate)
           when PlayerType.rifle
             rate *= V_SUPER_SHOT
-            player.shot(x * rate, y * rate)
             player.update_pointer(x * rate, y * rate)
 
   socket.on 'shake', (data) ->
