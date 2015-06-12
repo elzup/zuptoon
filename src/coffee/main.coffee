@@ -21,6 +21,9 @@ $ ->
   GAME_TIME_LIMIT_SEC = 60
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
+  Controller =
+    left: 0
+    right: 1
 
   SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
 
@@ -146,7 +149,7 @@ $ ->
         return
       # TODO: 三方向ショット
       new Liquid(@.x, @.y, @.dx, @.dy, @.team, 60.0, 4)
-    shot: (vsp)->
+    shot: (x, y)->
       if @.is_die
         return
       frame = game.frame
@@ -155,7 +158,7 @@ $ ->
         return
       # ランダムでずらす
       rr = Math.random() * 0.5
-      new Liquid(@.x, @.y, @.dx, @.dy, @.team, 20.0 * vsp, 2.0 + rr)
+      new Liquid(@.x, @.y, x, y, @.team, 40.0, 3.0 + rr)
       @.last_shot_frame = frame
 
     walk: (dx, dy) ->
@@ -375,18 +378,25 @@ $ ->
     context.closePath()
     context.fill()
 
+  to_xy = (rad) ->
+    x = Math.cos(rad)
+    y = Math.sin(rad)
+    return [x, y]
+
   socket.on 'move', (data) ->
     player = get_player(data.id)
     if !player?
       return
-    rate = data.radius / RADIUS_ACTION
-    console.log(rate)
-    if player.type == 0 and RADIUS_ACTION < data.radius and game_term == GameTerm.progress
-      player.walk(data.dx, data.dy)
-      player.shot(rate)
+    [x, y] = to_xy(data.rad)
+    # 左コントローラは移動
+    if data.con == Controller.left
+      player.walk(x, y)
     else
-      rate = ElzupUtils.clamp(rate, 1.5, 1.0)
-      player.walk(data.dx * rate, data.dy * rate)
+      # 中心付近のタッチは swim
+      if data.pow < 30
+        player.swim()
+      else
+        player.shot(x, y)
 
   socket.on 'shake', (data) ->
     player = get_player(data.id)

@@ -15,6 +15,10 @@ $ ->
   CON_X2 = game.width * 3 / 4
   CON_Y2 = CON_Y
 
+  Controller =
+    left: 0
+    right: 1
+
   # action(shot)と判定するが中央からの距離
   RADIUS_ACTION = game.width * 0.4
 
@@ -50,13 +54,13 @@ $ ->
         dy = ey_l - CON_Y
         rad = get_rad(dx, dy)
         va = ElzupUtils.vec_maguniture(dx, dy)
-        emit_move(rad, va, 0)
+        emit_move(rad, va, Controller.left)
       if is_touch_r
         dx = ex_r - CON_X2
         dy = ey_r - CON_Y2
         rad = get_rad(dx, dy)
         va = ElzupUtils.vec_maguniture(dx, dy)
-        emit_move(rad, va, 1)
+        emit_move(rad, va, Controller.right)
 
     game.rootScene.addEventListener Event.TOUCH_START, (e) ->
       if e.x < game.width / 2
