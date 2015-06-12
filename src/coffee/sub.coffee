@@ -4,7 +4,7 @@ $ ->
   enchant()
   game = new Core(480, 320)
   game.preload('/images/apad.png')
-  game.fps = 60
+  game.fps = 20
 
   RADIUS_ACTION = 160 * 0.4
 

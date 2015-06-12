@@ -12,13 +12,15 @@ $ ->
   RADIUS_ACTION = 160 * 0.4
   COL_LIB = ['red', 'yellow', 'blue', 'green'];
 
+  QUICK_DEBUG = 0
+
   MAP_MATRIX_SIZE = 8
   MAP_WIDTH_NUM = 64 * 2
   MAP_HEIGHT_NUM = 48 * 2
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
-  GAME_TIME_LIMIT_SEC = 60
+  GAME_TIME_LIMIT_SEC = 1000
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
@@ -44,7 +46,7 @@ $ ->
   ]
 
   SWIM_TIME = FPS * 2
-  PLAYER_SPEED = 1.0
+  PLAYER_SPEED = 2.0
   GameTerm =
     ready: 0
     progress: 1
@@ -117,7 +119,9 @@ $ ->
         fill_pos_circle(@.x + @.width / 2, @.y + @.width / 2, @.r(), @.team)
         @.parentNode.removeChild(@)
       )
-      kill_player_circle(@.x, @.y, @.r(), @.team)
+      r = @.r()
+      r = @.width * @.scaler / 2
+      kill_player_circle(@.x, @.y, r, @.team)
     r: ->
       @.width * @.scaleX / 2
 
@@ -125,13 +129,14 @@ $ ->
   Player = enchant.Class.create enchant.Sprite,
     id: null
     sp: PLAYER_SPEED
-    dx: 1
+    dx: 0
     dy: 0
     team: 0
     type: 0
     col: null
     last_shot_frame: 0
     is_swim: false
+    id_die: false
     initialize: (id, team, type) ->
       enchant.Sprite.call(@, 32, 32)
       @.id = id
@@ -189,9 +194,9 @@ $ ->
     on_team_color: ->
       [mx, my] = get_map_pos(@.x, @.y, @.width)
       baseMap[my][mx] == @.team + 1
-    id_die: false
 
     die: ->
+      console.log('die start')
       @.is_die = true
       @.opacity = 0.5
       @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, FPS).delay(FPS).and()
@@ -200,6 +205,7 @@ $ ->
         , FPS).then(->
           @.opacity = 1.0
           @.is_die = false
+          console.log('die end')
         )
 
 
@@ -363,7 +369,9 @@ $ ->
       dy = player.y - y
       if dx * dx + dy * dy > r2
         continue
+      console.log('k ' + player)
       fill_pos_circle(player.x + player.width / 2, player.y + player.height / 2, 50, team)
+      console.log(team + ' => ' + player.id)
       player.die()
 
   update_score = ->
@@ -394,6 +402,8 @@ $ ->
       rate = data.pow * 0.005 + 1
       player.walk(x * rate, y * rate)
     else
+      if game_term != GameTerm.progress and !QUICK_DEBUG
+        return
       # 中心付近のタッチは swim
       if data.pow < 30
         player.swim()
