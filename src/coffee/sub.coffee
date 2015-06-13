@@ -2,7 +2,7 @@ $ ->
   # enchant game
   console.log('load main controller')
   enchant()
-  game = new Core(480, 320)
+  game = new Core(640, 360)
   game.preload('/images/apad.png')
   game.fps = 20
 
