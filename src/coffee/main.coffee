@@ -24,6 +24,8 @@ $ ->
   MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
   MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
+  PLAYER_DIE_RADIUS = 100
+
   BlockType =
     NONE: 0
     COL_RED: 1 + COL_SHIFT
@@ -48,7 +50,7 @@ $ ->
     plus_swim: 3
 
   # GAME_TIME_LIMIT_SEC = 90
-  GAME_TIME_LIMIT_SEC = 10000
+  GAME_TIME_LIMIT_SEC = 90
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
@@ -59,21 +61,22 @@ $ ->
   INIT_POS = [
     {
       x: MAP_WIDTH / 7
-      y: MAP_HEIGHT / 7
+      y: MAP_HEIGHT / 10
     }, {
       x: MAP_WIDTH * 6 / 7
-      y: MAP_HEIGHT / 7
+      y: MAP_HEIGHT / 10
     }, {
       x: MAP_WIDTH / 7
-      y: MAP_HEIGHT * 6 / 7
+      y: MAP_HEIGHT * 6 / 10
     }, {
       x: MAP_WIDTH * 6 / 7
-      y: MAP_HEIGHT * 6 / 7
+      y: MAP_HEIGHT * 9 / 10
     }
   ]
 
   V_SHOT = 40.0
   V_SUPER_SHOT = 200.0
+  V_ROLLER = 20.0
 
   SWIM_TIME = FPS * 2
   PLAYER_SPEED = 1.5
@@ -271,9 +274,10 @@ $ ->
       else if @.on_enemy_color()
         sp *= 0.5
       # 精度が変わる部分
-      for i in [1..5]
-        nx = ElzupUtils.clamp(@.x + dx * sp / i, MAP_WIDTH - @.width)
-        ny = ElzupUtils.clamp(@.y + dy * sp / i, MAP_HEIGHT - @.height)
+      for i in [[1, 1], [1, 0], [0, 1]]
+        [kx, ky] = i
+        nx = ElzupUtils.clamp(@.x + dx * sp * kx, MAP_WIDTH - @.width)
+        ny = ElzupUtils.clamp(@.y + dy * sp * ky, MAP_HEIGHT - @.height)
         safe = true
         for p in @.end_points(nx, ny)
           [px, py] = p
@@ -285,20 +289,14 @@ $ ->
         @.moveTo(nx, ny)
         @.dx = dx
         @.dy = dy
-        if @.type == PlayerType.roller and game_term == GameTerm.progress
+        if @.type == PlayerType.roller and game_term == GameTerm.progress and not @.is_swim
           [vx, vy] = ElzupUtils.vec_vertical(dx, dy)
-          V_ROLLER = 20.0
           npx1 = ElzupUtils.clamp(@.ox() + dx * sp * V_ROLLER + vy * V_ROLLER, MAP_WIDTH - @.width)
           npy1 = ElzupUtils.clamp(@.oy() + dy * sp * V_ROLLER + vx * V_ROLLER, MAP_HEIGHT - @.height)
           npx2 = ElzupUtils.clamp(@.ox() + dx * sp * V_ROLLER - vy * V_ROLLER, MAP_WIDTH - @.width)
           npy2 = ElzupUtils.clamp(@.oy() + dy * sp * V_ROLLER - vx * V_ROLLER, MAP_HEIGHT - @.height)
-          # console.log('c', @.ox(), @.oy())
-          # console.log('c', @.ox() + dx * sp * V_ROLLER, @.oy() + dy * sp * V_ROLLER + dx * V_ROLLER)
-          # console.log('c', npx1, npy1, npx2, npy2)
           fill_pos_line(npx1, npy1, npx2, npy2, @.team)
           kill_player_line(npx1, npy1, npx2, npy2, @.team)
-          # fill_pos_circle(npx1, npy1, 2, @.team + 1)
-          # fill_pos_circle(npx2, npy2, 2, @.team + 1)
 
         @.scaleX = if dx > 0 then 1 else -1
 
@@ -449,8 +447,11 @@ $ ->
           baseMap[j][i] = 0
           span = 30
           col = 5
-          if STAGE == Stage.blocks and (i + 30) % span < col and (j + 15) % span < col
+          padding = 5
+          if STAGE == Stage.blocks and padding < j < (MAP_HEIGHT_NUM - padding) and padding < i < (MAP_WIDTH_NUM - padding) and (i + 15) % span < col and (j + 15) % span < col
             baseMap[j][i] = BlockType.BLOCK
+
+
           if j == 0 or j == MAP_HEIGHT_NUM - 1 or i == 0 or i == MAP_WIDTH_NUM - 1
             baseMap[j][i] = BlockType.WALL
     # else
@@ -537,7 +538,7 @@ $ ->
       dy = player.oy() - y
       if dx * dx + dy * dy > r2
         continue
-      fill_pos_circle(player.ox(), player.oy(), 50, team)
+      fill_pos_circle(player.ox(), player.oy(), PLAYER_DIE_RADIUS, team)
       player.die()
 
   fill_pos_line = (x1, y1, x2, y2, team) ->
@@ -566,7 +567,7 @@ $ ->
         py = y2 + (i / c) * (y1 - y2)
         [mx, my] = map_pos(px, py)
         if (-1 <= mx - mpx <= 1 && -1 <= my - mpy <= 1)
-          fill_pos_circle(player.ox(), player.oy(), 50, team)
+          fill_pos_circle(player.ox(), player.oy(), PLAYER_DIE_RADIUS, team)
           player.die()
           break
 
