@@ -8,7 +8,8 @@ $ ->
   SPR_Z_SHIFT = 1000
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
-  SHOT_RAPID_DELAY = FPS / 5 # 0.2秒
+  SHOT_RAPID_DELAY = FPS / 5
+  SUPERSHOT_RAPID_DELAY = FPS / 2
   COL_LIB = ['red', 'yellow', 'blue', 'green'];
 
   QUICK_DEBUG = 0
@@ -195,11 +196,17 @@ $ ->
     is_swim: false
     is_die: false
     pointer: null
+    delay: SHOT_RAPID_DELAY
     initialize: (id, team, type) ->
       enchant.Sprite.call(@, 32, 32)
       @.id = id
       @.team = team
       @.type = type
+      switch type
+        when PlayerType.gun
+          @.delay = SHOT_RAPID_DELAY
+        when PlayerType.rifle
+          @.delay = SUPERSHOT_RAPID_DELAY
 
       @.moveTo(INIT_POS[team].x, INIT_POS[team].y)
       @.image = game.assets['/images/space3.png']
@@ -207,26 +214,28 @@ $ ->
       @.col = COL_LIB[team]
       @._style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
-    supershot: (x, y)->
-      if @.is_die
-        return
-      liquid = new Liquid(@.x, @.y, x * V_SUPER_SHOT, y * V_SUPER_SHOT, @.team, 1, LiquidType.line)
-      console.log(liquid)
-      liquid.start()
 
     shot: (x, y)->
       if @.is_die
         return
       frame = game.frame
       # 即連射, swim中 禁止
-      if frame - @.last_shot_frame < SHOT_RAPID_DELAY
+      if frame - @.last_shot_frame < @.delay
         return
       if @.is_swim
         @.swim_end()
       # ランダムでずらす
       rr = Math.random() * 0.5
-      liquied = new Liquid(@.x, @.y, x, y, @.team, 3.0 + rr)
-      liquied.start()
+      scaler = rr + 3.0
+      type = LiquidType.simple
+      if type = PlayerType.rifle
+        scaler = 1
+        x *= V_SUPER_SHOT
+        y *= V_SUPER_SHOT
+        type = LiquidType.line
+
+      liquid = new Liquid(@.x, @.y, x, y, @.team, scaler, type)
+      liquid.start()
       @.last_shot_frame = frame
 
     update_pointer: (x, y)->
@@ -399,7 +408,7 @@ $ ->
           baseMap[j][i] = 0
           span = 30
           col = 5
-          if STAGE == Stage.blocks and (i + 15) % span < col and (j + 15) % span < col
+          if STAGE == Stage.blocks and (i + 30) % span < col and (j + 15) % span < col
             baseMap[j][i] = BlockType.BLOCK
           if j == 0 or j == MAP_HEIGHT_NUM - 1 or i == 0 or i == MAP_WIDTH_NUM - 1
             baseMap[j][i] = BlockType.WALL
@@ -447,7 +456,7 @@ $ ->
     if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 2, 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 2, 1) != mx
       return
     pre = baseMap[my][mx]
-    if pre == team + 1
+    if pre == team + 1 or is_block(pre)
       return
     baseMap[my][mx] = team + 1
     # スコア更新
@@ -574,7 +583,7 @@ $ ->
       [x, y] = to_xy(data.rad)
       if game_term != GameTerm.progress
         return
-      player.supershot(x * rate, y * rate)
+      player.shot(x * rate, y * rate)
       console.log("super shot")
 
   socket.on 'count', (data) ->
