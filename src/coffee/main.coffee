@@ -10,7 +10,8 @@ $ ->
   spr_count = 0
   SHOT_RAPID_DELAY = FPS / 5
   SUPERSHOT_RAPID_DELAY = FPS / 2
-  COL_LIB = ['red', 'yellow', 'blue', 'green'];
+  COL_LIB = ['#B58238', '#BE9562', '#8A4E1E', '#5B3417']
+  COL_SHIFT = 33
 
   QUICK_DEBUG = 0
 
@@ -22,12 +23,12 @@ $ ->
 
   BlockType =
     NONE: 0
-    COL_RED: 1
-    COL_YELLOW: 2
-    COL_BLUE: 3
-    COL_GREEN: 4
-    BLOCK: 8
-    WALL: 32
+    COL_RED: 1 + COL_SHIFT
+    COL_YELLOW: 2 + COL_SHIFT
+    COL_BLUE: 3 + COL_SHIFT
+    COL_GREEN: 4 + COL_SHIFT
+    BLOCK: 5
+    WALL: 6
 
   Stage =
     flat: 0
@@ -284,10 +285,10 @@ $ ->
   # 2つのメソッドまとめる
     on_team_color: ->
       [mx, my] = map_pos(@.ox(), @.oy())
-      baseMap[my][mx] == @.team + 1
+      baseMap[my][mx] == @.team + COL_SHIFT
     on_enemy_color: ->
       [mx, my] = map_pos(@.ox(), @.oy())
-      baseMap[my][mx] != 0 and baseMap[my][mx] != @.team + 1
+      baseMap[my][mx] != 0 and baseMap[my][mx] != @.team + COL_SHIFT
 
     die: ->
       @.opacity = 0.5
@@ -456,9 +457,9 @@ $ ->
     if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 2, 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 2, 1) != mx
       return
     pre = baseMap[my][mx]
-    if pre == team + 1 or is_block(pre)
+    if pre == team + COL_SHIFT or is_block(pre)
       return
-    baseMap[my][mx] = team + 1
+    baseMap[my][mx] = team + COL_SHIFT
     # スコア更新
     score[team] += 1
     if pre == 0
@@ -475,7 +476,7 @@ $ ->
     baseMap[my][mx]
 
   is_player_block_type = (type) ->
-    1 <= type <= 4
+    COL_SHIFT <= type < COL_SHIFT + 4
 
   is_block = (type) ->
     type == BlockType.BLOCK or type == BlockType.WALL
