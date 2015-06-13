@@ -10,3 +10,36 @@ a
   width 640px
   margin 0 auto
   border 1px solid #000
+
+team-color(col)
+  p
+    color col
+  li
+    background col
+
+h1
+  margin-left 20px
+.team
+  margin-left 10px
+  &.team0
+    team-color(red)
+  &.team1
+    team-color(orange)
+  &.team2
+    team-color(blue)
+  &.team3
+    team-color(green)
+
+  ul
+    display flex
+    list-style-type none
+    padding 5px 10px
+    li
+      width 20%
+      height 30px
+      padding-top 10px
+      text-align center
+      margin-left 5%
+      a
+        color white
+        display block
