@@ -9,7 +9,7 @@ $ ->
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
   SHOT_RAPID_DELAY = FPS * 0.2
-  SUPERSHOT_RAPID_DELAY = FPS * 0.8
+  SUPERSHOT_RAPID_DELAY = FPS * 1.0
   COL_LIB = ['red', 'yellow', 'blue', 'green']
   COL_SHIFT = 1
   # カフェラッテ
@@ -42,6 +42,10 @@ $ ->
   Frame =
     pointer_black: 0
     pointer: 1
+    plus_stand: 0
+    plus_walk: 1
+    plus_walk2: 2
+    plus_swim: 3
 
   GAME_TIME_LIMIT_SEC = 60
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
@@ -68,7 +72,7 @@ $ ->
   ]
 
   V_SHOT = 40.0
-  V_SUPER_SHOT = 100.0
+  V_SUPER_SHOT = 200.0
 
   SWIM_TIME = FPS * 2
   PLAYER_SPEED = 1.5
@@ -93,7 +97,7 @@ $ ->
 
   # core setting
   game = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
-  game.preload('/images/space3.png', '/images/icon0.png', '/images/map0.png', '/images/item.png')
+  game.preload('/images/bear.png', '/images/icon0.png', '/images/map0.png', '/images/item.png')
   game.fps = FPS
 
   # global
@@ -197,6 +201,8 @@ $ ->
     sp: PLAYER_SPEED
     dx: 0
     dy: 0
+    pre_x: 0
+    pre_y: 0
     team: 0
     type: PlayerType.gun
     col: null
@@ -217,7 +223,7 @@ $ ->
           @.delay = SUPERSHOT_RAPID_DELAY
 
       @.moveTo(INIT_POS[team].x, INIT_POS[team].y)
-      @.image = game.assets['/images/space3.png']
+      @.image = game.assets['/images/bear.png']
       @.frame = team * 5
       @.col = COL_LIB[team]
       @._style.zIndex = -PLAYER_Z_SHIFT
@@ -270,9 +276,7 @@ $ ->
         for p in @.end_points(nx, ny)
           [px, py] = p
           block_type = map_type(px, py)
-          console.log(block_type)
           if is_block(block_type)
-            console.log(i)
             safe = false
         if !safe
           continue
@@ -281,14 +285,25 @@ $ ->
         @.dy = dy
         @.scaleX = if dx > 0 then 1 else -1
 
+    onenterframe: ->
+      if @.is_swim
+      else if @.moved()
+        @.frame = @.team * 5 + Frame.plus_walk + @.age / 4 % 2
+      else
+        @.frame = @.team * 5 + Frame.plus_stand
+      [@.pre_x, @.pre_y] = [@.x, @.y]
+
+    moved: ->
+      @.x != @.pre_x or @.y != @.pre_y
+
     swim: ->
       if @.is_die
         return
       @.is_swim = true
-      @.frame = @.team * 5 + 2
+      @.frame = @.team * 5 + Frame.plus_swim
       @.tl.delay(SWIM_TIME).then(@.swim_end)
     swim_end: ->
-      @.frame = @.team * 5
+      @.frame = @.team * 5 + Frame.plus_stand
       @.is_swim = false
   # 2つのメソッドまとめる
     on_team_color: ->
@@ -451,20 +466,6 @@ $ ->
     # NOTE: マップに対する変更箇所全てに必要
     update_score()
 
-  fill_pos_line = (x1, y1, x2, y2, team) ->
-    c = 10
-    for i in [0...c]
-      px = x2 + (i / c) * (x1 - x2)
-      py = y2 + (i / c) * (y1 - y2)
-      [mx, my] = map_pos(px, py)
-      for dx in [-1...2]
-        for dy in [-1...2]
-          fill_map(mx + dx, my + dy, team)
-    if SHOW_TYPE == ShowType.matrix_fill
-      map.loadData(baseMap)
-    # graphical line
-    update_score()
-
   fill_map = (mx, my, team) ->
     if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 2, 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 2, 1) != mx
       return
@@ -521,6 +522,20 @@ $ ->
         continue
       fill_pos_circle(player.ox(), player.oy(), 50, team)
       player.die()
+
+  fill_pos_line = (x1, y1, x2, y2, team) ->
+    c = 10
+    for i in [0...c]
+      px = x2 + (i / c) * (x1 - x2)
+      py = y2 + (i / c) * (y1 - y2)
+      [mx, my] = map_pos(px, py)
+      for dx in [-1...2]
+        for dy in [-1...2]
+          fill_map(mx + dx, my + dy, team)
+    if SHOW_TYPE == ShowType.matrix_fill
+      map.loadData(baseMap)
+    # graphical line
+    update_score()
 
   kill_player_line = (x1, y1, x2, y2, team) ->
     # NOTE: 軽量化出来そうな処理
@@ -590,14 +605,12 @@ $ ->
 
   socket.on 'leave', (data) ->
     player = get_player(data.id)
-    console.log(player.type)
     if player.type == PlayerType.rifle
       rate = data.pow * 0.005 + 1
       [x, y] = to_xy(data.rad)
       if game_term != GameTerm.progress
         return
       player.shot(x * rate, y * rate)
-      console.log("super shot")
 
   socket.on 'count', (data) ->
     $count = $('#count')
