@@ -132,5 +132,5 @@ $ ->
       rad: rad
       pow: pow
 
-  # 新規ユーザ作成
+  # 加速度センサシェイク
   $(@).gShake -> emit_shake()

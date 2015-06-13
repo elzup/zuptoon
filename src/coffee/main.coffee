@@ -548,7 +548,7 @@ $ ->
       context.fillStyle = COL_LIB[i]
       # 右端からトップチームを100% とした割合
       h = FOOTER_HEIGHT * i / 4
-      context.fillRect(0, h, score[i] * MAP_WIDTH / max, h + FOOTER_HEIGHT / 4 - 1)
+      context.fillRect(0, h, score[i] * MAP_WIDTH / max, FOOTER_HEIGHT / 4)
     context.closePath()
     context.fill()
 
