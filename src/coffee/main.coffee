@@ -38,8 +38,10 @@ $ ->
   Stage =
     flat: 0
     blocks: 1
-    bridge: 'stage1.json'
-  STAGE = Stage.blocks
+    wall: 2
+    vortex: 3
+    sprite: 4
+  STAGE = Stage.wall
 
   Frame =
     pointer_black: 0
@@ -58,7 +60,7 @@ $ ->
     right: 1
 
   # SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
-  INIT_POS = [
+  init_pos = [
     {
       x: MAP_WIDTH / 7
       y: MAP_HEIGHT / 10
@@ -227,7 +229,7 @@ $ ->
         when PlayerType.rifle
           @.delay = SUPERSHOT_RAPID_DELAY
 
-      @.moveTo(INIT_POS[team].x, INIT_POS[team].y)
+      @.moveTo(init_pos[team].x * MAP_MATRIX_SIZE, init_pos[team].y * MAP_MATRIX_SIZE)
       @.image = game.assets['/images/bear.png']
       @.frame = team * 5
       @.col = COL_LIB[team]
@@ -332,7 +334,7 @@ $ ->
       @.opacity = 0.5
       @.is_die = true
       @.tl.clear()
-      @.tl.moveTo(INIT_POS[@.team].x, INIT_POS[@.team].y, FPS / 2)
+      @.tl.moveTo(init_pos[@.team].x * MAP_MATRIX_SIZE, init_pos[@.team].y * MAP_MATRIX_SIZE, FPS / 2)
       .delay(FPS).and().repeat(->
         @.opacity = @.age % 2
       , FPS).then(->
@@ -367,6 +369,10 @@ $ ->
     liquid_group = new Group()
     # player は手前
 
+    for i, p of init_pos
+      [x, y] = map_pos(p.x, p.y)
+      init_pos[i].x = x
+      init_pos[i].y = y
     map = new Map(MAP_MATRIX_SIZE, MAP_MATRIX_SIZE)
     map.image = game.assets['/images/map0.png']
     baseMap = create_map()
@@ -450,13 +456,18 @@ $ ->
           padding = 5
           if STAGE == Stage.blocks and padding < j < (MAP_HEIGHT_NUM - padding) and padding < i < (MAP_WIDTH_NUM - padding) and (i + 15) % span < col and (j + 15) % span < col
             baseMap[j][i] = BlockType.BLOCK
-
-
           if j == 0 or j == MAP_HEIGHT_NUM - 1 or i == 0 or i == MAP_WIDTH_NUM - 1
             baseMap[j][i] = BlockType.WALL
-    # else
-    #   $.get STAGE, null, ->
-    #     baseMap
+    else if STAGE == Stage.wall
+      baseMap = Maps.wall()
+      for j in [0...MAP_HEIGHT_NUM]
+        for i in [0...MAP_WIDTH_NUM]
+          p = baseMap[j][i]
+          if not is_block(p) and p != BlockType.NONE
+            console.log(p)
+            init_pos[p - 1] = { x: i, y: j }
+    # else if STAGE == Stage.vortex
+    # else if STAGE == Stage.sprite
     baseMap
 
   draw_pointer = (x, y, time, frame = Frame.pointer) ->
