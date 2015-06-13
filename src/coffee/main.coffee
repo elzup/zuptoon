@@ -8,10 +8,13 @@ $ ->
   SPR_Z_SHIFT = 1000
   PLAYER_Z_SHIFT = 10000
   spr_count = 0
-  SHOT_RAPID_DELAY = FPS / 5
-  SUPERSHOT_RAPID_DELAY = FPS / 2
-  COL_LIB = ['#B58238', '#BE9562', '#8A4E1E', '#5B3417']
-  COL_SHIFT = 33
+  SHOT_RAPID_DELAY = FPS * 0.2
+  SUPERSHOT_RAPID_DELAY = FPS * 0.8
+  COL_LIB = ['red', 'yellow', 'blue', 'green']
+  COL_SHIFT = 1
+  # カフェラッテ
+  # COL_SHIFT = 33 #
+  # COL_LIB = ['#B58238', '#BE9562', '#8A4E1E', '#5B3417']
 
   QUICK_DEBUG = 0
 
@@ -36,7 +39,11 @@ $ ->
     bridge: 'stage1.json'
   STAGE = Stage.blocks
 
-  GAME_TIME_LIMIT_SEC = 1000
+  Frame =
+    pointer_black: 0
+    pointer: 1
+
+  GAME_TIME_LIMIT_SEC = 60
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
@@ -64,7 +71,7 @@ $ ->
   V_SUPER_SHOT = 100.0
 
   SWIM_TIME = FPS * 2
-  PLAYER_SPEED = 2.0
+  PLAYER_SPEED = 1.5
   GameTerm =
     ready: 0
     progress: 1
@@ -219,9 +226,8 @@ $ ->
     shot: (x, y)->
       if @.is_die
         return
-      frame = game.frame
       # 即連射, swim中 禁止
-      if frame - @.last_shot_frame < @.delay
+      if not @.reloaded()
         return
       if @.is_swim
         @.swim_end()
@@ -229,7 +235,7 @@ $ ->
       rr = Math.random() * 0.5
       scaler = rr + 3.0
       type = LiquidType.simple
-      if type = PlayerType.rifle
+      if @.type == PlayerType.rifle
         scaler = 1
         x *= V_SUPER_SHOT
         y *= V_SUPER_SHOT
@@ -237,13 +243,15 @@ $ ->
 
       liquid = new Liquid(@.x, @.y, x, y, @.team, scaler, type)
       liquid.start()
-      @.last_shot_frame = frame
+      @.last_shot_frame = game.frame
 
     update_pointer: (x, y)->
       px = @x + x
       py = @y + y
-      draw_pointer(px, py, 3)
+      draw_pointer(px, py, 3, if @.reloaded() then Frame.pointer else Frame.pointer_black)
 
+    reloaded: ->
+      game.frame - @.last_shot_frame > @.delay
 
     walk: (dx, dy) ->
       if @.is_die
@@ -413,12 +421,16 @@ $ ->
             baseMap[j][i] = BlockType.BLOCK
           if j == 0 or j == MAP_HEIGHT_NUM - 1 or i == 0 or i == MAP_WIDTH_NUM - 1
             baseMap[j][i] = BlockType.WALL
+    # else
+    #   $.get STAGE, null, ->
+    #     baseMap
     baseMap
 
-  draw_pointer = (x, y, time) ->
+  draw_pointer = (x, y, time, frame = Frame.pointer) ->
     pointer = new Sprite(16, 16)
     pointer.image = game.assets['/images/item.png']
     pointer.moveTo(x, y)
+    pointer.frame = frame
     game.rootScene.addChild(pointer)
     pointer.tl.delay(time).then(->
       game.rootScene.removeChild(@)
