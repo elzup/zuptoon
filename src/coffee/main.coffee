@@ -47,7 +47,8 @@ $ ->
     plus_walk2: 2
     plus_swim: 3
 
-  GAME_TIME_LIMIT_SEC = 60
+  # GAME_TIME_LIMIT_SEC = 90
+  GAME_TIME_LIMIT_SEC = 10000
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
@@ -84,7 +85,8 @@ $ ->
   PlayerType =
     gun: 0
     rifle: 1
-    shotgun: 1
+    roller: 2
+    shotgun: 4
 
   # map view type
   # 0: graphical
@@ -283,6 +285,21 @@ $ ->
         @.moveTo(nx, ny)
         @.dx = dx
         @.dy = dy
+        if @.type == PlayerType.roller and game_term == GameTerm.progress
+          [vx, vy] = ElzupUtils.vec_vertical(dx, dy)
+          V_ROLLER = 20.0
+          npx1 = ElzupUtils.clamp(@.ox() + dx * sp * V_ROLLER + vy * V_ROLLER, MAP_WIDTH - @.width)
+          npy1 = ElzupUtils.clamp(@.oy() + dy * sp * V_ROLLER + vx * V_ROLLER, MAP_HEIGHT - @.height)
+          npx2 = ElzupUtils.clamp(@.ox() + dx * sp * V_ROLLER - vy * V_ROLLER, MAP_WIDTH - @.width)
+          npy2 = ElzupUtils.clamp(@.oy() + dy * sp * V_ROLLER - vx * V_ROLLER, MAP_HEIGHT - @.height)
+          # console.log('c', @.ox(), @.oy())
+          # console.log('c', @.ox() + dx * sp * V_ROLLER, @.oy() + dy * sp * V_ROLLER + dx * V_ROLLER)
+          # console.log('c', npx1, npy1, npx2, npy2)
+          fill_pos_line(npx1, npy1, npx2, npy2, @.team)
+          kill_player_line(npx1, npy1, npx2, npy2, @.team)
+          # fill_pos_circle(npx1, npy1, 2, @.team + 1)
+          # fill_pos_circle(npx2, npy2, 2, @.team + 1)
+
         @.scaleX = if dx > 0 then 1 else -1
 
     onenterframe: ->

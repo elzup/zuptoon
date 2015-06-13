@@ -19,3 +19,9 @@ class @ElzupUtils
       params[key] = decodeURIComponent(val)
     params
 
+  @vec_vertical = (x, y)->
+    t = Math.atan2(x, y)
+    t += Math.PI / 2
+    [Math.cos(t), Math.sin(t)]
+
+
