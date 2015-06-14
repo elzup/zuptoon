@@ -471,9 +471,9 @@ $ ->
     baseMap
 
   draw_pointer = (x, y, time, frame = Frame.pointer) ->
-    pointer = new Sprite(16, 16)
+    pointer = new Sprite(32, 32)
     pointer.image = game.assets['/images/item.png']
-    pointer.moveTo(x, y)
+    pointer.moveTo(x - pointer.width / 2, y - pointer.height / 2)
     pointer.frame = frame
     game.rootScene.addChild(pointer)
     pointer.tl.delay(time).then(->
