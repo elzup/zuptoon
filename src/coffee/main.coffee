@@ -41,7 +41,7 @@ $ ->
     wall: 2
     vortex: 3
     sprite: 4
-  STAGE = Stage.wall
+  STAGE = [0, 2, 3, 4][Math.floor(Math.random() * 4)]
 
   Frame =
     pointer_black: 0
@@ -458,8 +458,13 @@ $ ->
             baseMap[j][i] = BlockType.BLOCK
           if j == 0 or j == MAP_HEIGHT_NUM - 1 or i == 0 or i == MAP_WIDTH_NUM - 1
             baseMap[j][i] = BlockType.WALL
-    else if STAGE == Stage.wall
-      baseMap = Maps.wall()
+    else
+      if STAGE == Stage.wall
+        baseMap = Maps.wall()
+      else if STAGE == Stage.vortex
+        baseMap = Maps.vortex()
+      else
+        baseMap = Maps.sprite()
       for j in [0...MAP_HEIGHT_NUM]
         for i in [0...MAP_WIDTH_NUM]
           p = baseMap[j][i]
