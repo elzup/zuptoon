@@ -173,7 +173,6 @@ $ ->
 
       if @is_die
         return
-      tp = new Victor(0, 0).copy(@pos).add(@v)
       if @v.length() == 0
         return
 
@@ -192,11 +191,12 @@ $ ->
       dx = Math.abs(vx)
       dy = Math.abs(vy)
       cposs = []
-      for deg in [0...360] by 60
-        cposs.push(to_xy(deg * Math.PI * 2 / 360).add(@pos))
+      for deg in [0...360] by 30
+        cposs.push(to_xy(deg * Math.PI * 2 / 360).multiply(new Victor(@r(), @r())).add(@opos()))
 
       for p in cposs
         tx = p.x + @v.x
+        # mx, my 単体取得
         [msx, tmp] = map_pos(p.x, p.y)
         [mex, my] = map_pos(tx, p.y)
         vxt = Math.abs vx
@@ -211,6 +211,7 @@ $ ->
               vxt = tsx - p.x
             else
               vxt = p.x - (tsx + MAP_MATRIX_SIZE)
+            vxt -= 5
             break
         dx = Math.min(dx, vxt)
 
@@ -235,6 +236,7 @@ $ ->
               vyt = tsy - p.y
             else
               vyt = p.y - (tsy + MAP_MATRIX_SIZE)
+            vyt -= 5
             break
         dy = Math.min(dy, vyt)
 
@@ -259,10 +261,14 @@ $ ->
         @is_die = false
       )
 
+    r: ->
+      @width / 2
     ox: ->
       @pos.x + @width / 2
     oy: ->
       @pos.y + @height / 2
+    opos: ->
+      new Victor(@ox(), @oy())
 
   game.onload = ->
 
