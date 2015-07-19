@@ -133,18 +133,20 @@ $ ->
     a: new Victor(1.0, 1.0)
 
     initialize: (@pos, @v) ->
-      @v.multiply(new Victor(4, 4))
       enchant.Sprite.call(this, 32, 32)
       # TODO: group
       @image = game.assets['/images/item.png']
       @frame = Frame.ItemShot
       @moveTo(@pos.x, @pos.y)
+      @tl.scaleTo(0.5, 0.5)
+      rad = Math.atan2(@v.x, @v.y)
+      @rotation = 180 - rad * 180 / Math.PI
 
     onenterframe: ->
       @pos.add(@v)
       @moveTo(@pos.x, @pos.y)
       # @v.multiply(@a)
-      if map_type(@pos.x, @pos.y) in [BlockType.BLOCK, BlockType.WALL]
+      if map_type(@ox(), @oy()) in [BlockType.BLOCK, BlockType.WALL]
         game.rootScene.removeChild(this)
 
     r: ->
@@ -182,8 +184,12 @@ $ ->
       player_group.addChild(@)
 
     shot: (x, y)->
+      if @v.length() == 0
+        return
       console.log "shot"
-      shot = new Shot(new Victor(0, 0).copy(@pos), new Victor(0, 0).copy(@v))
+      v = new Victor(0, 0).copy(@v).normalize().multiply(new Victor(10, 10))
+      pos = new Victor(0, 0).copy(@pos).add(v)
+      shot = new Shot(pos, v)
       console.log shot
       game.rootScene.addChild(shot)
 
