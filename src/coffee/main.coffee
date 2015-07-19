@@ -134,7 +134,7 @@ $ ->
     a: new Victor(1.0, 1.0)
     mp: 5
 
-    initialize: (@pos, @v) ->
+    initialize: (@pos, @v, @team) ->
       enchant.Sprite.call(this, 32, 32)
       # TODO: group
       @image = game.assets['/images/item.png']
@@ -148,11 +148,27 @@ $ ->
       @pos.add(@v)
       @moveTo(@pos.x, @pos.y)
       # @v.multiply(@a)
+
+      # MP の分布変更
       if @age % 10 == 0
         [mx, my] = map_pos(@ox(), @oy())
-        baseMap[my][mx] = BlockType.MP
-        map.loadData(baseMap)
-        @mp -= 1
+        if baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
+          baseMap[my][mx] = BlockType.MP
+          map.loadData(baseMap)
+          @mp -= 1
+
+      # プレイヤー衝突判定
+      for player in player_group.childNodes
+        if player.team == @team
+          continue
+        dx = player.ox() - @ox()
+        dy = player.oy() - @oy()
+        if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
+          game.rootScene.removeChild(this)
+          player.damage()
+          return
+
+      # ブロック衝突判定
       if map_type(@ox(), @oy()) in [BlockType.BLOCK, BlockType.WALL]
         game.rootScene.removeChild(this)
 
@@ -178,6 +194,7 @@ $ ->
     last_shot_frame: 0
     is_die: false
     mp: 100
+    hp: 100
     pointer: null
     delay: SHOT_RAPID_DELAY
 
@@ -191,6 +208,9 @@ $ ->
       @_style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
 
+    damage: ->
+      @hp -= 20
+
     shot: (x, y)->
       if @v.length() == 0
         return
@@ -199,7 +219,7 @@ $ ->
       console.log "shot"
       v = new Victor(0, 0).copy(@v).normalize().multiply(new Victor(10, 10))
       pos = new Victor(0, 0).copy(@pos).add(v)
-      shot = new Shot(pos, v)
+      shot = new Shot(pos, v, @team)
       console.log shot
       game.rootScene.addChild(shot)
 
@@ -213,8 +233,8 @@ $ ->
 
     onenterframe: ->
       if @moved()
-        @frame = @team * 5 + Frame.Walk + @age / 4 % 2
-
+        @frame = @team * 5 + [Frame.Walk, Frame.Stand][ElzupUtils.period(@age, 8, 2)]
+        console.log(@frame)
       else
         @frame = @team * 5 + Frame.Stand
       @pre_pos.copy(@pos)
@@ -307,7 +327,7 @@ $ ->
 
 
     moved: ->
-      new Victor(0, 0).copy(@pre_pos).subtract(@pos).length() > 0
+      @v.length() != 0
 
     die: ->
       @opacity = 0.5
