@@ -30,6 +30,7 @@ BlockType =
   COL_YELLOW: 2 + COL_SHIFT
   COL_BLUE: 3 + COL_SHIFT
   COL_GREEN: 4 + COL_SHIFT
+  MP: 9
   BLOCK: 5
   WALL: 6
 
@@ -131,6 +132,7 @@ $ ->
     pos: new Victor(0, 0)
     v: new Victor(0, 0)
     a: new Victor(1.0, 1.0)
+    mp: 5
 
     initialize: (@pos, @v) ->
       enchant.Sprite.call(this, 32, 32)
@@ -146,6 +148,11 @@ $ ->
       @pos.add(@v)
       @moveTo(@pos.x, @pos.y)
       # @v.multiply(@a)
+      if @age % 10 == 0
+        [mx, my] = map_pos(@ox(), @oy())
+        baseMap[my][mx] = BlockType.MP
+        map.loadData(baseMap)
+        @mp -= 1
       if map_type(@ox(), @oy()) in [BlockType.BLOCK, BlockType.WALL]
         game.rootScene.removeChild(this)
 
@@ -170,6 +177,7 @@ $ ->
     col: null
     last_shot_frame: 0
     is_die: false
+    mp: 100
     pointer: null
     delay: SHOT_RAPID_DELAY
 
@@ -186,6 +194,8 @@ $ ->
     shot: (x, y)->
       if @v.length() == 0
         return
+      # TODO: mp 消費量バランス
+      @mp -= 5
       console.log "shot"
       v = new Victor(0, 0).copy(@v).normalize().multiply(new Victor(10, 10))
       pos = new Victor(0, 0).copy(@pos).add(v)
@@ -215,6 +225,7 @@ $ ->
         return
 
       @check_conf_pos()
+      @get_mps()
       # @pos.add(new Victor(vx, vy))
       @v.multiply(@a)
       if @v.length() < 0.5
@@ -283,6 +294,17 @@ $ ->
 
       @pos.y += dy
       @v = k
+
+    get_mps: ->
+      [@msx, @msy] = map_pos(@pos.x, @pos.y)
+      [@mex, @mey] = map_pos(@pos.x + @width, @pos.y + @height)
+      for my in [@msy..@mey]
+        for mx in [@msx..@mex]
+          if baseMap[my][mx] == BlockType.MP
+            baseMap[my][mx] = BlockType.NONE
+            @mp += 1
+      map.loadData(baseMap)
+
 
     moved: ->
       new Victor(0, 0).copy(@pre_pos).subtract(@pos).length() > 0
