@@ -4,5 +4,21 @@ block head_script
   script(src='/socket.io/socket.io.js')
   script(src='//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js')
   script(src='javascripts/enchant.js')
+  script(src='/jquery/dist/jquery.min.js')
+  script(src='/jquery-qrcode/jquery.qrcode.min.js')
+  script(src="/javascripts/set_qr.js")
   script(src='javascripts/ui.enchant.js')
   script(src='javascripts/main.js')
+
+
+block content
+  body
+    // section#wrapper
+    section#game
+      div#enchant-stage(style="width: 1200px; height: 1000px")
+    section#infos
+      section#qr-box
+        h3
+          | スマホで参加!
+        div#qr
+      section#users-box
