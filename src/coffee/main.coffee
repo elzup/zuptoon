@@ -1,106 +1,106 @@
+# constants
+FPS = 20
+
+SPR_Z_SHIFT = 1000
+PLAYER_Z_SHIFT = 10000
+spr_count = 0
+SHOT_RAPID_DELAY = FPS * 0.2
+SUPERSHOT_RAPID_DELAY = FPS * 1.0
+COL_LIB = ['red', 'yellow', 'blue', 'green']
+COL_SHIFT = 1
+# カフェラッテ
+# COL_SHIFT = 33 #
+# COL_LIB = ['#B58238', '#BE9562', '#8A4E1E', '#5B3417']
+
+QUICK_DEBUG = 0
+
+MAP_MATRIX_SIZE = 8
+MAP_WIDTH_NUM = 64 * 2
+MAP_HEIGHT_NUM = 48 * 2
+MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
+MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
+
+PLAYER_DIE_RADIUS = 100
+
+BlockType =
+  NONE: 0
+  COL_RED: 1 + COL_SHIFT
+  COL_YELLOW: 2 + COL_SHIFT
+  COL_BLUE: 3 + COL_SHIFT
+  COL_GREEN: 4 + COL_SHIFT
+  BLOCK: 5
+  WALL: 6
+
+Stage =
+  flat: 0
+  blocks: 1
+  wall: 2
+  vortex: 3
+  sprite: 4
+STAGE = [0, 2, 3, 4][Math.floor(Math.random() * 4)]
+
+Frame =
+  pointer_black: 0
+  pointer: 1
+  plus_stand: 0
+  plus_walk: 1
+  plus_walk2: 2
+  plus_swim: 3
+
+# GAME_TIME_LIMIT_SEC = 90
+GAME_TIME_LIMIT_SEC = 90
+GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
+FOOTER_HEIGHT = 80
+Controller =
+  left: 0
+  right: 1
+
+# SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
+init_pos = [
+  {
+    x: MAP_WIDTH / 7
+    y: MAP_HEIGHT / 10
+  }, {
+    x: MAP_WIDTH * 6 / 7
+    y: MAP_HEIGHT / 10
+  }, {
+    x: MAP_WIDTH / 7
+    y: MAP_HEIGHT * 6 / 10
+  }, {
+    x: MAP_WIDTH * 6 / 7
+    y: MAP_HEIGHT * 9 / 10
+  }
+]
+
+V_SHOT = 40.0
+V_SUPER_SHOT = 200.0
+V_ROLLER = 20.0
+
+SWIM_TIME = FPS * 2
+PLAYER_SPEED = 1.5
+GameTerm =
+  ready: 0
+  progress: 1
+  result: 2
+
+PlayerType =
+  gun: 0
+  rifle: 1
+  roller: 2
+  shotgun: 4
+
+# map view type
+# 0: graphical
+# 1: matrix_fill
+ShowType =
+  graphical: 0
+  matrix_fill: 1
+
+SHOW_TYPE = ShowType.matrix_fill
+
 $ ->
   # enchant game
   enchant()
-
-  # constants
-  FPS = 20
-
-  SPR_Z_SHIFT = 1000
-  PLAYER_Z_SHIFT = 10000
-  spr_count = 0
-  SHOT_RAPID_DELAY = FPS * 0.2
-  SUPERSHOT_RAPID_DELAY = FPS * 1.0
-  COL_LIB = ['red', 'yellow', 'blue', 'green']
-  COL_SHIFT = 1
-  # カフェラッテ
-  # COL_SHIFT = 33 #
-  # COL_LIB = ['#B58238', '#BE9562', '#8A4E1E', '#5B3417']
-
-  QUICK_DEBUG = 0
-
-  MAP_MATRIX_SIZE = 8
-  MAP_WIDTH_NUM = 64 * 2
-  MAP_HEIGHT_NUM = 48 * 2
-  MAP_WIDTH = MAP_WIDTH_NUM * MAP_MATRIX_SIZE
-  MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
-
-  PLAYER_DIE_RADIUS = 100
-
-  BlockType =
-    NONE: 0
-    COL_RED: 1 + COL_SHIFT
-    COL_YELLOW: 2 + COL_SHIFT
-    COL_BLUE: 3 + COL_SHIFT
-    COL_GREEN: 4 + COL_SHIFT
-    BLOCK: 5
-    WALL: 6
-
-  Stage =
-    flat: 0
-    blocks: 1
-    wall: 2
-    vortex: 3
-    sprite: 4
-  STAGE = [0, 2, 3, 4][Math.floor(Math.random() * 4)]
-
-  Frame =
-    pointer_black: 0
-    pointer: 1
-    plus_stand: 0
-    plus_walk: 1
-    plus_walk2: 2
-    plus_swim: 3
-
-  # GAME_TIME_LIMIT_SEC = 90
-  GAME_TIME_LIMIT_SEC = 90
-  GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
-  FOOTER_HEIGHT = 80
-  Controller =
-    left: 0
-    right: 1
-
-  # SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
-  init_pos = [
-    {
-      x: MAP_WIDTH / 7
-      y: MAP_HEIGHT / 10
-    }, {
-      x: MAP_WIDTH * 6 / 7
-      y: MAP_HEIGHT / 10
-    }, {
-      x: MAP_WIDTH / 7
-      y: MAP_HEIGHT * 6 / 10
-    }, {
-      x: MAP_WIDTH * 6 / 7
-      y: MAP_HEIGHT * 9 / 10
-    }
-  ]
-
-  V_SHOT = 40.0
-  V_SUPER_SHOT = 200.0
-  V_ROLLER = 20.0
-
-  SWIM_TIME = FPS * 2
-  PLAYER_SPEED = 1.5
-  GameTerm =
-    ready: 0
-    progress: 1
-    result: 2
-
-  PlayerType =
-    gun: 0
-    rifle: 1
-    roller: 2
-    shotgun: 4
-
-  # map view type
-  # 0: graphical
-  # 1: matrix_fill
-  ShowType =
-    graphical: 0
-    matrix_fill: 1
-
-  SHOW_TYPE = ShowType.matrix_fill
 
   # core setting
   game = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
@@ -127,8 +127,7 @@ $ ->
   game_start_time = 0
 
   # socket io
-  socket_url = 'http://192.168.1.50'
-  socket = io.connect socket_url
+  socket = io.connect()
 
   LiquidType =
     simple: 0
