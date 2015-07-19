@@ -51,9 +51,6 @@ Frame =
 GAME_TIME_LIMIT_SEC = 90
 GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
 FOOTER_HEIGHT = 80
-Controller =
-  left: 0
-  right: 1
 
 # SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
 init_pos = [
@@ -112,9 +109,6 @@ $ ->
   game_term = null
 
   player_group = null
-  liquid_group = null
-
-  liquid_sprite = null
 
   map = null
   baseMap = null
@@ -129,86 +123,13 @@ $ ->
   # socket io
   socket = io.connect()
 
-  LiquidType =
-    simple: 0
-    line: 1
-
-  Liquid = enchant.Class.create enchant.Sprite,
-    sx: 0
-    sy: 0
-    team: 0
-    type: 0
-    scaler: 2.0
-    vx: 0
-    vy: 0
-
-    initialize: (x, y, vx, vy, team, scaler = 2.0, type = LiquidType.simple) ->
-      enchant.Sprite.call(this, 16, 16)
-      spr_count += 1
-      @.sx = x
-      @.sy = y
-      @.vx = vx
-      @.vy = vy
-      @.image = game.assets['/images/icon0.png']
-      @.scaler = scaler
-      @.type = type
-      @.moveTo(x + @.width / 2, y + @.height / 2)
-      @.frame = 12
-      @._style.zIndex = -SPR_Z_SHIFT
-      @.team = team
-
-    start: ->
-      # ランダムでずらす
-      rx = (Math.random() - 0.5) * 16
-      ry = (Math.random() - 0.5) * 16
-      px = @.vx + rx
-      py = @.vy + ry
-      sp = 8
-      if @.type == LiquidType.line
-        fill_pos_line(@.ox(), @.oy(), @.ox() + px, @.oy() + py, @.team)
-        kill_player_line(@.ox(), @.oy(), @.ox() + px, @.oy() + py, @.team)
-        sp = 4
-      @.tl.moveBy(px, py, sp).then -> @.pop()
-      # if @.type == LiquidType.simple
-      #   draw_pointer(@.x + px, @.y + py, FPS)
-      liquid_group.addChild(@)
-
-    pop: ->
-      @.scale(@.scaler * 0.8, @.scaler * 0.8)
-      sfc = new Surface(16, 16)
-      ctx = sfc.context
-      ctx.beginPath()
-      ctx.arc(sfc.width / 2, sfc.height / 2, sfc.width / 2, 0, Math.PI * 2, false)
-      ctx.fill()
-      sfc.context.fillStyle = COL_LIB[@.team]
-      sfc.context.fill()
-      @.image = sfc
-      delay = FPS * 0.5
-      if @.type == LiquidType.line
-        delay = FPS * 0.1
-      @.tl.scaleTo(@.scaler, @.scaler, delay).then(->
-        fill_pos_circle(@.ox(), @.oy(), @.r(), @.team)
-        @.parentNode.removeChild(@)
-      )
-      r = @.width * @.scaler / 2
-      kill_player_circle(@.x, @.y, r, @.team)
-  # DEBUG: kill する範囲を黒で塗りつぶす debug で大事
-  # draw_circle(@.ox(), @.oy(), r, 'black', true)
-
-    r: ->
-      @.width * @.scaleX / 2
-    ox: ->
-      @.x + @.width / 2
-    oy: ->
-      @.y + @.height / 2
-
   Player = enchant.Class.create enchant.Sprite,
     id: null
     sp: PLAYER_SPEED
-    dx: 0
-    dy: 0
-    pre_x: 0
-    pre_y: 0
+    pos: new Victor(0, 0)
+    v: new Victor(0, 0)
+    a: new Victor(0.8, 0.8)
+    pre_pos: new Victor(0, 0)
     team: 0
     type: PlayerType.gun
     col: null
@@ -217,145 +138,96 @@ $ ->
     is_die: false
     pointer: null
     delay: SHOT_RAPID_DELAY
-    initialize: (id, team, type) ->
+    initialize: (@id, @team, @type) ->
       enchant.Sprite.call(@, 32, 32)
-      @.id = id
-      @.team = team
-      @.type = type
-      switch type
+      switch @type
         when PlayerType.gun
-          @.delay = SHOT_RAPID_DELAY
+          @delay = SHOT_RAPID_DELAY
         when PlayerType.rifle
-          @.delay = SUPERSHOT_RAPID_DELAY
+          @delay = SUPERSHOT_RAPID_DELAY
 
-      console.log team
-      console.log init_pos[team]
-      console.log (init_pos[team]).x
-      @.moveTo(init_pos[team].x * MAP_MATRIX_SIZE, init_pos[team].y * MAP_MATRIX_SIZE)
-      @.image = game.assets['/images/bear.png']
-      @.frame = team * 5
-      @.col = COL_LIB[team]
-      @._style.zIndex = -PLAYER_Z_SHIFT
+      @moveTo(init_pos[@team].x * MAP_MATRIX_SIZE, init_pos[@team].y * MAP_MATRIX_SIZE)
+      @image = game.assets['/images/bear.png']
+      @frame = @team * 5
+      @col = COL_LIB[@team]
+      @_style.zIndex = -PLAYER_Z_SHIFT
       player_group.addChild(@)
 
     shot: (x, y)->
-      if @.is_die
-        return
-      # 即連射, swim中 禁止
-      if not @.reloaded()
-        return
-      if @.is_swim
-        @.swim_end()
-      # ランダムでずらす
-      rr = Math.random() * 0.5
-      scaler = rr + 3.0
-      type = LiquidType.simple
-      if @.type == PlayerType.rifle
-        scaler = 1
-        x *= V_SUPER_SHOT
-        y *= V_SUPER_SHOT
-        type = LiquidType.line
-
-      liquid = new Liquid(@.x, @.y, x, y, @.team, scaler, type)
-      liquid.start()
-      @.last_shot_frame = game.frame
-
-    update_pointer: (x, y)->
-      px = @x + x
-      py = @y + y
-      draw_pointer(px, py, 3, if @.reloaded() then Frame.pointer else Frame.pointer_black)
+      # TODO:
+      console.log "shot"
 
     reloaded: ->
-      game.frame - @.last_shot_frame > @.delay
+      game.frame - @last_shot_frame > @delay
 
-    walk: (dx, dy) ->
-      if @.is_die
-        return
-      sp = @.sp
-      # swim モードでかつプレイヤーの位置がチーム色の場合
-      if @.is_swim && @.on_team_color()
-        sp *= 4
-      else if @.on_enemy_color()
-        sp *= 0.5
-      # 精度が変わる部分
-      for i in [[1, 1], [1, 0], [0, 1]]
-        [kx, ky] = i
-        nx = ElzupUtils.clamp(@.x + dx * sp * kx, MAP_WIDTH - @.width)
-        ny = ElzupUtils.clamp(@.y + dy * sp * ky, MAP_HEIGHT - @.height)
-        safe = true
-        for p in @.end_points(nx, ny)
-          [px, py] = p
-          block_type = map_type(px, py)
-          if is_block(block_type)
-            safe = false
-        if !safe
-          continue
-        @.moveTo(nx, ny)
-        @.dx = dx
-        @.dy = dy
-        if @.type == PlayerType.roller and game_term == GameTerm.progress and not @.is_swim
-          [vx, vy] = ElzupUtils.vec_vertical(dx, dy)
-          npx1 = ElzupUtils.clamp(@.ox() + dx * sp * V_ROLLER + vy * V_ROLLER, MAP_WIDTH - @.width)
-          npy1 = ElzupUtils.clamp(@.oy() + dy * sp * V_ROLLER + vx * V_ROLLER, MAP_HEIGHT - @.height)
-          npx2 = ElzupUtils.clamp(@.ox() + dx * sp * V_ROLLER - vy * V_ROLLER, MAP_WIDTH - @.width)
-          npy2 = ElzupUtils.clamp(@.oy() + dy * sp * V_ROLLER - vx * V_ROLLER, MAP_HEIGHT - @.height)
-          fill_pos_line(npx1, npy1, npx2, npy2, @.team)
-          kill_player_line(npx1, npy1, npx2, npy2, @.team)
-
-        @.scaleX = if dx > 0 then 1 else -1
+    walk: (@rad, @pow) ->
+      mr = @pow / 90
+      @v.add new Victor(0, 2).rotate(-@rad).multiply(new Victor(mr, mr))
+      @rotation = 180 - @rad * 180 / Math.PI
 
     onenterframe: ->
-      if @.is_swim
-      else if @.moved()
-        @.frame = @.team * 5 + Frame.plus_walk + @.age / 4 % 2
+      if @is_swim
+      else if @moved()
+        @frame = @team * 5 + Frame.plus_walk + @age / 4 % 2
       else
-        @.frame = @.team * 5 + Frame.plus_stand
-      [@.pre_x, @.pre_y] = [@.x, @.y]
+        @frame = @team * 5 + Frame.plus_stand
+      @pre_pos.copy(@pos)
+
+      if @is_die
+        return
+
+      console.log(@pos)
+      @pos.add(@v)
+      @pos.limit(MAP_WIDTH, 1.0)
+      @v.multiply(@a)
+      if @v.length() < 0.5
+        @v = new Victor(0, 0)
+      @moveTo(@pos.x, @pos.y)
 
     moved: ->
-      @.x != @.pre_x or @.y != @.pre_y
+      new Victor(0, 0).copy(@pre_pos).subtract(@pos).length() > 0
 
     swim: ->
-      if @.is_die
+      if @is_die
         return
-      @.is_swim = true
-      @.frame = @.team * 5 + Frame.plus_swim
-      @.tl.delay(SWIM_TIME).then(@.swim_end)
+      @is_swim = true
+      @frame = @team * 5 + Frame.plus_swim
+      @tl.delay(SWIM_TIME).then(@swim_end)
     swim_end: ->
-      @.frame = @.team * 5 + Frame.plus_stand
-      @.is_swim = false
+      @frame = @team * 5 + Frame.plus_stand
+      @is_swim = false
   # 2つのメソッドまとめる
     on_team_color: ->
-      [mx, my] = map_pos(@.ox(), @.oy())
-      baseMap[my][mx] == @.team + COL_SHIFT
+      [mx, my] = map_pos(@ox(), @oy())
+      baseMap[my][mx] == @team + COL_SHIFT
     on_enemy_color: ->
-      [mx, my] = map_pos(@.ox(), @.oy())
-      baseMap[my][mx] != 0 and baseMap[my][mx] != @.team + COL_SHIFT
+      [mx, my] = map_pos(@ox(), @oy())
+      baseMap[my][mx] != 0 and baseMap[my][mx] != @team + COL_SHIFT
 
     die: ->
-      @.opacity = 0.5
-      @.is_die = true
-      @.tl.clear()
-      @.tl.moveTo(init_pos[@.team].x * MAP_MATRIX_SIZE, init_pos[@.team].y * MAP_MATRIX_SIZE, FPS / 2)
+      @opacity = 0.5
+      @is_die = true
+      @tl.clear()
+      @tl.moveTo(init_pos[@team].x * MAP_MATRIX_SIZE, init_pos[@team].y * MAP_MATRIX_SIZE, FPS / 2)
       .delay(FPS).and().repeat(->
-        @.opacity = @.age % 2
+        @opacity = @age % 2
       , FPS).then(->
-        @.opacity = 1.0
-        @.is_die = false
+        @opacity = 1.0
+        @is_die = false
       )
 
     ox: ->
-      @.x + @.width / 2
+      @x + @width / 2
     oy: ->
-      @.y + @.height / 2
+      @y + @height / 2
 
-    end_point: (vx, vy, cx = @.x, cy = @.y) ->
-      px = if vx < 0 then cx else cx + @.width
-      py = if vy < 0 then cy else cy + @.height
+    end_point: (vx, vy, cx = @x, cy = @y) ->
+      px = if vx < 0 then cx else cx + @width
+      py = if vy < 0 then cy else cy + @height
       [px, py]
 
-    end_points: (cx = @.x, cy = @.y) ->
-      [[cx, cy], [cx + @.width, cy], [cx, cy + @.height], [cx + @.width, cy + @.height]]
+    end_points: (cx = @x, cy = @y) ->
+      [[cx, cy], [cx + @width, cy], [cx, cy + @height], [cx + @width, cy + @height]]
 
 
   game.onload = ->
@@ -366,9 +238,7 @@ $ ->
   game_init = ->
     game.rootScene.remove()
     game_term = GameTerm.ready
-    # create liquid image
     player_group = new Group()
-    liquid_group = new Group()
     # player は手前
 
     for i, p of init_pos
@@ -380,9 +250,6 @@ $ ->
     baseMap = create_map()
     map.loadData(baseMap)
 
-    liquid_sprite = new Sprite(MAP_WIDTH, MAP_HEIGHT)
-    liquid_sprite.image = new Surface(MAP_WIDTH, MAP_HEIGHT)
-
     timer_label = new Label()
     timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
     timer_label.font = '50px "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif'
@@ -391,7 +258,7 @@ $ ->
         return
       progress = parseInt((game.frame - game_start_time) / game.fps)
       time = GAME_TIME_LIMIT_SEC - progress;
-      @.text = time + ""
+      @text = time + ""
       # if (time <= GAME_TIME_PRE_FINISH)
       #   timer_label.tl.scaleTo(1, 1).scaleTo(1.5, 1.5, FPS * 0.6).delay(FPS * 0.4)
       if (time == GAME_TIME_PRE_FINISH)
@@ -422,8 +289,6 @@ $ ->
 
     game.rootScene.backgroundColor = "#AAA";
     game.rootScene.addChild(map)
-    game.rootScene.addChild(liquid_sprite)
-    game.rootScene.addChild(liquid_group)
     game.rootScene.addChild(player_group)
     game.rootScene.addChild(score_bar)
     game.rootScene.addChild(score_cover)
@@ -532,12 +397,6 @@ $ ->
   draw_circle = (x, y, r, col, force = false) ->
     if SHOW_TYPE != ShowType.graphical and !force
       return
-    context = liquid_sprite.image.context
-    context.beginPath()
-    context.fillStyle = col
-    context.arc(x, y, r, 0, Math.PI * 2)
-    context.closePath()
-    context.fill()
 
   get_player = (id) ->
     for player in player_group.childNodes
@@ -616,41 +475,12 @@ $ ->
     player = get_player(data.id)
     if !player?
       return
-    [x, y] = to_xy(data.rad)
-    # 左コントローラは移動
-    if data.con == Controller.left
-      rate = data.pow * 0.005 + 1
-      player.walk(x * rate, y * rate)
-    else
-      if game_term != GameTerm.progress and !QUICK_DEBUG
-        return
-      # 中心付近のタッチは swim
-      if data.pow < 30
-        player.swim()
-      else
-        # (data.pow - 30) / 70 * 0.4 + 0.8
-        rate = (data.pow - 30) * 4 / 700 + 0.8
-        switch player.type
-          when PlayerType.gun
-            rate *= V_SHOT
-            player.shot(x * rate, y * rate)
-            player.update_pointer(x * rate, y * rate)
-          when PlayerType.rifle
-            rate *= V_SUPER_SHOT
-            player.update_pointer(x * rate, y * rate)
+    player.walk(data.rad, data.pow)
 
   socket.on 'shake', (data) ->
     # TODO: create action
-    # player = get_player(data.id)
-
-  socket.on 'leave', (data) ->
     player = get_player(data.id)
-    if player.type == PlayerType.rifle
-      rate = data.pow * 0.005 + 1
-      [x, y] = to_xy(data.rad)
-      if game_term != GameTerm.progress
-        return
-      player.shot(x * rate, y * rate)
+    player.shot()
 
   socket.on 'count', (data) ->
     $count = $('#count')
