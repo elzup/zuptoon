@@ -12,30 +12,23 @@ skio = (server, io) ->
     person_count = socket.client.conn.server.clientsCount
     io.emit 'count', count: person_count
 
-    socket.on 'shake', (data) ->
+    socket.on 'shake', ->
       console.log 'shake!' + socket.id
-      data.id = socket.id
-      io.emit 'shake', data
+      io.to('top').emit 'shake', id: socket.id
       return
 
     socket.on 'move', (data) ->
-      console.log 'move!' + data
+      console.log 'move!' + socket.id
       data.id = socket.id
       io.emit 'move', data
       return
 
     socket.on 'new', (data) ->
-      console.log 'new : ' + socket.io
+      console.log 'new : ' + socket.id
       socket.join(data.room)
       data.id = socket.id
       if data.room == 'user'
         io.to('top').emit 'createuser', data
-      return
-
-    socket.on 'leave', (data) ->
-      console.log 'leave : ' + socket.id
-      data.id = socket.id
-      io.emit 'leave', data
       return
 
     socket.on 'disconnect', ->

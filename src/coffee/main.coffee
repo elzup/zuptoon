@@ -49,6 +49,7 @@ Frame =
   Attack: 2
   Damage: 3
   Super: 4
+  ItemShot: 2
 
 # GAME_TIME_LIMIT_SEC = 90
 GAME_TIME_LIMIT_SEC = 90
@@ -126,6 +127,35 @@ $ ->
   # socket io
   socket = io.connect()
 
+  Shot = enchant.Class.create enchant.Sprite,
+    pos: new Victor(0, 0)
+    v: new Victor(0, 0)
+    a: new Victor(1.0, 1.0)
+
+    initialize: (@pos, @v) ->
+      @v.multiply(new Victor(4, 4))
+      enchant.Sprite.call(this, 32, 32)
+      # TODO: group
+      @image = game.assets['/images/item.png']
+      @frame = Frame.ItemShot
+      @moveTo(@pos.x, @pos.y)
+
+    onenterframe: ->
+      @pos.add(@v)
+      @moveTo(@pos.x, @pos.y)
+      # @v.multiply(@a)
+      if map_type(@pos.x, @pos.y) in [BlockType.BLOCK, BlockType.WALL]
+        game.rootScene.removeChild(this)
+
+    r: ->
+      @width / 2
+    ox: ->
+      @pos.x + @width / 2
+    oy: ->
+      @pos.y + @height / 2
+    opos: ->
+      new Victor(@ox(), @oy())
+
   Player = enchant.Class.create enchant.Sprite,
     id: null
     sp: PLAYER_SPEED
@@ -142,7 +172,7 @@ $ ->
     delay: SHOT_RAPID_DELAY
 
     initialize: (@id, @team) ->
-      enchant.Sprite.call(@, 32, 32)
+      enchant.Sprite.call(this, 32, 32)
       @pos = new Victor(init_pos[@team].x * MAP_MATRIX_SIZE, init_pos[@team].y * MAP_MATRIX_SIZE).subtract(new Victor(@width / 2, @width / 2))
       @moveTo(@pos.x, @pos.y)
       @image = game.assets['/images/player.png']
@@ -152,8 +182,10 @@ $ ->
       player_group.addChild(@)
 
     shot: (x, y)->
-      # TODO:
       console.log "shot"
+      shot = new Shot(new Victor(0, 0).copy(@pos), new Victor(0, 0).copy(@v))
+      console.log shot
+      game.rootScene.addChild(shot)
 
     reloaded: ->
       game.frame - @last_shot_frame > @delay
@@ -416,8 +448,8 @@ $ ->
     score[pre - 1] -= 1
 
   map_pos = (sx, sy, r = 0) ->
-    mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_MATRIX_SIZE), MAP_WIDTH_NUM)
-    my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM)
+    mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_MATRIX_SIZE), MAP_WIDTH_NUM - 1)
+    my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM - 1)
     [mx, my]
 
   to_spos = (mx, my) ->
@@ -527,6 +559,8 @@ $ ->
   socket.on 'shake', (data) ->
     # TODO: create action
     player = get_player(data.id)
+    console.log "Shake!"
+    console.log player
     player.shot()
 
   socket.on 'count', (data) ->
