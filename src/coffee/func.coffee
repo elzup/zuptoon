@@ -23,3 +23,7 @@ class @ElzupUtils
     t = Math.atan2(x, y)
     t += Math.PI / 2
     [Math.cos(t), Math.sin(t)]
+
+  # range 周期を split分割してどの位置であるか
+  @period = (n, range, split=2)->
+    Math.floor(n % range / (range / split) % split)

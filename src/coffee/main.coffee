@@ -22,6 +22,8 @@ MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
 PLAYER_DIE_RADIUS = 100
 
+debug_surface = null
+
 BlockType =
   NONE: 0
   COL_RED: 1 + COL_SHIFT
@@ -40,12 +42,13 @@ Stage =
 STAGE = [0, 2, 3, 4][Math.floor(Math.random() * 4)]
 
 Frame =
-  pointer_black: 0
+  None: -1
   pointer: 1
-  plus_stand: 0
-  plus_walk: 1
-  plus_walk2: 2
-  plus_swim: 3
+  Stand: 0
+  Walk: 1
+  Attack: 2
+  Damage: 3
+  Super: 4
 
 # GAME_TIME_LIMIT_SEC = 90
 GAME_TIME_LIMIT_SEC = 90
@@ -101,7 +104,7 @@ $ ->
 
   # core setting
   game = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
-  game.preload('/images/bear.png', '/images/icon0.png', '/images/map0.png', '/images/item.png')
+  game.preload('/images/player.png', '/images/icon0.png', '/images/map0.png', '/images/item.png')
   game.fps = FPS
 
   # global
@@ -134,20 +137,15 @@ $ ->
     type: PlayerType.gun
     col: null
     last_shot_frame: 0
-    is_swim: false
     is_die: false
     pointer: null
     delay: SHOT_RAPID_DELAY
-    initialize: (@id, @team, @type) ->
-      enchant.Sprite.call(@, 32, 32)
-      switch @type
-        when PlayerType.gun
-          @delay = SHOT_RAPID_DELAY
-        when PlayerType.rifle
-          @delay = SUPERSHOT_RAPID_DELAY
 
-      @moveTo(init_pos[@team].x * MAP_MATRIX_SIZE, init_pos[@team].y * MAP_MATRIX_SIZE)
-      @image = game.assets['/images/bear.png']
+    initialize: (@id, @team) ->
+      enchant.Sprite.call(@, 32, 32)
+      @pos = new Victor(init_pos[@team].x * MAP_MATRIX_SIZE, init_pos[@team].y * MAP_MATRIX_SIZE).subtract(new Victor(@width / 2, @width / 2))
+      @moveTo(@pos.x, @pos.y)
+      @image = game.assets['/images/player.png']
       @frame = @team * 5
       @col = COL_LIB[@team]
       @_style.zIndex = -PLAYER_Z_SHIFT
@@ -166,43 +164,40 @@ $ ->
       @rotation = 180 - @rad * 180 / Math.PI
 
     onenterframe: ->
-      if @is_swim
-      else if @moved()
-        @frame = @team * 5 + Frame.plus_walk + @age / 4 % 2
+      if @moved()
+        @frame = @team * 5 + Frame.Walk + @age / 4 % 2
+
       else
-        @frame = @team * 5 + Frame.plus_stand
+        @frame = @team * 5 + Frame.Stand
       @pre_pos.copy(@pos)
 
       if @is_die
         return
+      tp = new Victor(0, 0).copy(@pos).add(@v)
+      if @v.length() == 0
+        return
 
-      console.log(@pos)
+      if @check_conf(tp)
+        @v = new Victor(0, 0)
+        return
       @pos.add(@v)
-      @pos.limit(MAP_WIDTH, 1.0)
       @v.multiply(@a)
       if @v.length() < 0.5
         @v = new Victor(0, 0)
       @moveTo(@pos.x, @pos.y)
 
+    check_conf: (p) ->
+      p.add(new Victor(@width / 2, @width / 2))
+      # 精度
+      for deg in [0...360] by 60
+        [x, y] = to_xy(deg * Math.PI * 2 / 360)
+        t = map_type(p.x + x * @width / 2, p.y + y * @width / 2)
+        if t in [BlockType.BLOCK, BlockType.WALL]
+          return true
+      return false
+
     moved: ->
       new Victor(0, 0).copy(@pre_pos).subtract(@pos).length() > 0
-
-    swim: ->
-      if @is_die
-        return
-      @is_swim = true
-      @frame = @team * 5 + Frame.plus_swim
-      @tl.delay(SWIM_TIME).then(@swim_end)
-    swim_end: ->
-      @frame = @team * 5 + Frame.plus_stand
-      @is_swim = false
-  # 2つのメソッドまとめる
-    on_team_color: ->
-      [mx, my] = map_pos(@ox(), @oy())
-      baseMap[my][mx] == @team + COL_SHIFT
-    on_enemy_color: ->
-      [mx, my] = map_pos(@ox(), @oy())
-      baseMap[my][mx] != 0 and baseMap[my][mx] != @team + COL_SHIFT
 
     die: ->
       @opacity = 0.5
@@ -217,20 +212,17 @@ $ ->
       )
 
     ox: ->
-      @x + @width / 2
+      @pos.x + @width / 2
     oy: ->
-      @y + @height / 2
-
-    end_point: (vx, vy, cx = @x, cy = @y) ->
-      px = if vx < 0 then cx else cx + @width
-      py = if vy < 0 then cy else cy + @height
-      [px, py]
-
-    end_points: (cx = @x, cy = @y) ->
-      [[cx, cy], [cx + @width, cy], [cx, cy + @height], [cx + @width, cy + @height]]
-
+      @pos.y + @height / 2
 
   game.onload = ->
+
+    ### debug init ###
+    sp = new Sprite(2000, 2000)
+    debug_surface = new Surface(2000, 2000)
+    sp.image = debug_surface
+    game.rootScene.addChild(sp)
     game_init()
 
   game.start()
@@ -340,16 +332,6 @@ $ ->
     # else if STAGE == Stage.vortex
     # else if STAGE == Stage.sprite
     baseMap
-
-  draw_pointer = (x, y, time, frame = Frame.pointer) ->
-    pointer = new Sprite(32, 32)
-    pointer.image = game.assets['/images/item.png']
-    pointer.moveTo(x - pointer.width / 2, y - pointer.height / 2)
-    pointer.frame = frame
-    game.rootScene.addChild(pointer)
-    pointer.tl.delay(time).then(->
-      game.rootScene.removeChild(@)
-    )
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
@@ -475,6 +457,9 @@ $ ->
     player = get_player(data.id)
     if !player?
       return
+    # controller touch leaved
+    if data.pow == 0
+      return
     player.walk(data.rad, data.pow)
 
   socket.on 'shake', (data) ->
@@ -489,7 +474,7 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
-    new Player(data.id, parseInt(data.team), parseInt(data.type))
+    new Player(data.id, parseInt(data.team))
 
   socket.on 'removeuser', (data) ->
     console.log('delete user')
