@@ -228,6 +228,9 @@ $ ->
         when PlayerType.rifle
           @.delay = SUPERSHOT_RAPID_DELAY
 
+      console.log team
+      console.log init_pos[team]
+      console.log (init_pos[team]).x
       @.moveTo(init_pos[team].x * MAP_MATRIX_SIZE, init_pos[team].y * MAP_MATRIX_SIZE)
       @.image = game.assets['/images/bear.png']
       @.frame = team * 5
@@ -468,7 +471,6 @@ $ ->
         for i in [0...MAP_WIDTH_NUM]
           p = baseMap[j][i]
           if not is_block(p) and p != BlockType.NONE
-            console.log(p)
             init_pos[p - 1] = { x: i, y: j }
     # else if STAGE == Stage.vortex
     # else if STAGE == Stage.sprite
@@ -605,6 +607,11 @@ $ ->
     y = Math.sin(rad)
     return [x, y]
 
+  socket.emit 'new',
+    room: 'top'
+  # TODO: remove debug outputs
+  console.log('socket connect try')
+
   socket.on 'move', (data) ->
     player = get_player(data.id)
     if !player?
@@ -659,3 +666,4 @@ $ ->
     console.log(data)
     player = get_player(data.id)
     player_group.removeChild(player)
+

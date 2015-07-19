@@ -23,5 +23,3 @@ class @ElzupUtils
     t = Math.atan2(x, y)
     t += Math.PI / 2
     [Math.cos(t), Math.sin(t)]
-
-

@@ -1,133 +1,89 @@
+MAP_WIDTH = 320
+MAP_HEIGHT = 400
+
 $ ->
-  # enchant game
-  console.log('load main controller')
+  ### enchant.js ###
   enchant()
-  game = new Core(640, 360)
-  game.preload('/images/apad.png')
-  game.fps = 20
 
-  RADIUS_ACTION = 160 * 0.4
-
-  BG_SIZE = 100
-
-  CON_X = game.width / 4
-  CON_Y = game.height / 2
-  CON_X2 = game.width * 3 / 4
-  CON_Y2 = CON_Y
-
-  Controller =
-    left: 0
-    right: 1
-
-  # action(shot)と判定するが中央からの距離
-  RADIUS_ACTION = game.width * 0.4
+  game = new Core(MAP_WIDTH, MAP_HEIGHT)
+  game.preload "images/apad.png"
+  game.fps = 10
 
   game.onload = ->
+    console.log "game onload"
+    controller = new Sprite(100, 100)
+    console.log game.assets
+    controller.image = game.assets['images/apad.png']
+    # controller.scale(controller.width, controller.height)
+    scale_ratio = MAP_WIDTH / controller.width
+    controller.scale(scale_ratio, scale_ratio)
+    controller.moveTo(MAP_WIDTH / 2 - 50, MAP_HEIGHT / 2 - 50)
+    game.rootScene.addChild(controller)
 
-    # NOTE: game.rootScene#size game.root#size 違い
-    # とりあえず画像のサイズ
-    # 左コントローラ
-    bg_left = new Sprite(BG_SIZE, BG_SIZE)
-    bg_left.scale(game.height / 200, game.height / 200)
-    bg_left.moveTo(CON_X - BG_SIZE / 2, CON_Y - BG_SIZE / 2)
-    bg_left.image = game.assets['/images/apad.png']
-    game.rootScene.addChild(bg_left)
-
-    # 右コントローラ
-    bg_right = new Sprite(BG_SIZE, BG_SIZE)
-    bg_right.scale(game.height / 200, game.height / 200)
-    bg_right.moveTo(CON_X2 - BG_SIZE / 2, CON_Y2 - BG_SIZE / 2)
-    bg_right.image = game.assets['/images/apad.png']
-    game.rootScene.addChild(bg_right)
-
-    is_touch_l = false
-    ex_l = null
-    ey_l = null
-
-    is_touch_r = false
-    ex_r = null
-    ey_r = null
+    is_touch = false
+    is_touch_pre = false
+    ex = null
+    ey = null
 
     game.rootScene.addEventListener Event.ENTER_FRAME, () ->
-      if is_touch_l
-        [dx, dy, rad, pow] = get_vec(ex_l, ey_l, Controller.left)
-        emit_move(rad, pow, Controller.left)
-      if is_touch_r
-        [dx, dy, rad, pow] = get_vec(ex_r, ey_r, Controller.right)
-        emit_move(rad, pow, Controller.right)
+      if is_touch
+        [dx, dy, rad, pow] = get_vec(ex, ey)
+        emit_move(rad, pow)
+      if is_touch_pre and not is_touch
+        emit_stop()
+      is_touch_pre = is_touch
 
     game.rootScene.addEventListener Event.TOUCH_START, (e) ->
-      if e.x < game.width / 2
-        is_touch_l = true
-        ex_l = e.x
-        ey_l = e.y
-      else
-        is_touch_r = true
-        ex_r = e.x
-        ey_r = e.y
-
+      ex = e.x
+      ey = e.y
+      is_touch = true
     game.rootScene.addEventListener Event.TOUCH_END, (e) ->
-      if e.x < game.width / 2
-        is_touch_l = false
-      else
-        is_touch_r = false
-        [dx, dy, rad, pow] = get_vec(e.x, e.y, Controller.right)
-        if pow > 30
-          emit_leave(rad, pow)
+      is_touch = false
 
     game.rootScene.addEventListener Event.TOUCH_MOVE, (e) ->
-      if e.x < game.width / 2
-        ex_l = e.x
-        ey_l = e.y
-      else
-        ex_r = e.x
-        ey_r = e.y
+      ex = e.x
+      ey = e.y
 
-  game.start()
+    console.log "game onload end"
+    return
 
-  get_vec = (x, y, con) ->
-    con_x = CON_X
-    con_y = CON_Y
-    if con == Controller.right
-      con_x = CON_X2
-      con_y = CON_Y2
-    dx = x - con_x
-    dy = y - con_y
-    rad = get_rad(dx, dy)
+  get_vec = (x, y) ->
+    dx = x - MAP_WIDTH / 2
+    dy = y - MAP_HEIGHT / 2
+    rad = Math.atan2(dx, dy)
     va = ElzupUtils.vec_maguniture(dx, dy)
     rad = parseInt(rad * 100) / 100
     pow = ElzupUtils.clamp(parseInt(va), 100)
     return [dx, dy, rad, pow]
 
-  get_rad = (x, y) ->
-    Math.atan2(y, x)
+  game.start()
+
+  ### socket.io ###
+  socket = io.connect()
 
   get_params = ElzupUtils.get_parameters()
-  # socket io
-  socket = io.connect()
   socket.emit 'new',
+    room: 'user'
     type: get_params['type']
     team: get_params['team']
+  # TODO: remove debug outputs
+  console.log('socket connect try')
 
-  # スマホのシェイクイベントを取得
-  # TODO: remove act:
-  emit_shake = ->
-    socket.emit 'shake',
-      act: 'swim'
+  socket.on 'init_res', (data) ->
+    console.log('socket connected id' + data.id)
 
-  emit_move = (rad, pow, con) ->
+  emit_move = (rad, pow) ->
     socket.emit 'move',
       rad: rad
       pow: pow
-      con: con
-    console.log(rad, pow, con)
-
-  emit_leave = (rad, pow)->
-    console.log('emit leave')
     console.log(rad, pow)
-    socket.emit 'leave',
-      rad: rad
-      pow: pow
 
-  # 加速度センサシェイク
-  $(@).gShake -> emit_shake()
+  emit_stop = ->
+    emit_move(0, 0)
+
+  emit_shake = ->
+    console.log("shake")
+    socket.emit 'shake'
+
+  ($ this).gShake ->
+    emit_shake()
