@@ -177,24 +177,72 @@ $ ->
       if @v.length() == 0
         return
 
-      if @check_conf(tp)
-        @v = new Victor(0, 0)
-        return
-      @pos.add(@v)
+      @check_conf_pos()
+      # @pos.add(new Victor(vx, vy))
       @v.multiply(@a)
       if @v.length() < 0.5
         @v = new Victor(0, 0)
       @moveTo(@pos.x, @pos.y)
 
-    check_conf: (p) ->
-      p.add(new Victor(@width / 2, @width / 2))
-      # 精度
+    check_conf_pos: ->
+      vx = @v.x
+      vy = @v.y
+      k = new Victor(0, 0).copy(@v)
+
+      dx = Math.abs(vx)
+      dy = Math.abs(vy)
+      cposs = []
       for deg in [0...360] by 60
-        [x, y] = to_xy(deg * Math.PI * 2 / 360)
-        t = map_type(p.x + x * @width / 2, p.y + y * @width / 2)
-        if t in [BlockType.BLOCK, BlockType.WALL]
-          return true
-      return false
+        cposs.push(to_xy(deg * Math.PI * 2 / 360).add(@pos))
+
+      for p in cposs
+        tx = p.x + @v.x
+        [msx, tmp] = map_pos(p.x, p.y)
+        [mex, my] = map_pos(tx, p.y)
+        vxt = Math.abs vx
+        msx += 1
+        if @v.x < 0
+          msx -= 2
+        for mx in [msx..mex]
+          if baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+            tsx = to_sx(mx)
+            k.x = 0
+            if @v.x >= 0
+              vxt = tsx - p.x
+            else
+              vxt = p.x - (tsx + MAP_MATRIX_SIZE)
+            break
+        dx = Math.min(dx, vxt)
+
+      if vx < 0
+        dx *= -1
+      @pos.x += dx
+
+      for p in cposs
+        ty = p.y + @v.y
+        p.x += dx
+        [tmp, msy] = map_pos(p.x, p.y)
+        [mx, mey] = map_pos(p.x, ty)
+        vyt = Math.abs vy
+        msy += 1
+        if @v.y < 0
+          msy -= 2
+        for my in [msy..mey]
+          if baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+            tsy = to_sy(my)
+            k.y = 0
+            if @v.y >= 0
+              vyt = tsy - p.y
+            else
+              vyt = p.y - (tsy + MAP_MATRIX_SIZE)
+            break
+        dy = Math.min(dy, vyt)
+
+      if vy < 0
+        dy *= -1
+
+      @pos.y += dy
+      @v = k
 
     moved: ->
       new Victor(0, 0).copy(@pre_pos).subtract(@pos).length() > 0
@@ -366,6 +414,16 @@ $ ->
     my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM)
     [mx, my]
 
+  to_spos = (mx, my) ->
+    [to_sx(mx), to_sy(my)]
+
+  to_sx = (mx) ->
+    MAP_MATRIX_SIZE * mx
+
+  to_sy = (my) ->
+    MAP_MATRIX_SIZE * my
+
+
   map_type = (sx, sy) ->
     [mx, my] = map_pos(sx, sy)
     baseMap[my][mx]
@@ -444,9 +502,7 @@ $ ->
     context.fill()
 
   to_xy = (rad) ->
-    x = Math.cos(rad)
-    y = Math.sin(rad)
-    return [x, y]
+    new Victor(Math.cos(rad), Math.sin(rad))
 
   socket.emit 'new',
     room: 'top'
