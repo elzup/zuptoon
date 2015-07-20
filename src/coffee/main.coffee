@@ -156,6 +156,7 @@ $ ->
       # MP の分布変更
       if @age % 10 == 0
         [mx, my] = map_pos(@ox(), @oy())
+        console.log "k", baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
         if baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
           baseMap[my][mx] = BlockType.MP
           map.loadData(baseMap)
@@ -163,7 +164,7 @@ $ ->
 
       # プレイヤー衝突判定
       for player in player_group.childNodes
-        if player.team == @team
+        if player.team == @team || player.is_die
           continue
         dx = player.ox() - @ox()
         dy = player.oy() - @oy()
@@ -211,10 +212,12 @@ $ ->
 
     damage: ->
       @hp -= 20
+      if @hp <= 0
+        @die()
       update_dom(this)
 
     shot: (x, y)->
-      if @v.length() == 0
+      if @v.length() == 0 or @mp < 5
         return
       # TODO: mp 消費量バランス
       @mp -= 5
@@ -323,7 +326,7 @@ $ ->
         for mx in [@msx..@mex]
           if baseMap[my][mx] == BlockType.MP
             baseMap[my][mx] = BlockType.NONE
-            @mp += 1
+            @mp += 3
       update_dom(this)
       map.loadData(baseMap)
 
@@ -334,6 +337,10 @@ $ ->
     die: ->
       @opacity = 0.5
       @is_die = true
+      # @frame = Frame.None
+      # @diemove()
+
+    diemove: ->
       @tl.clear()
       @tl.moveTo(init_pos[@team].x * MAP_MATRIX_SIZE, init_pos[@team].y * MAP_MATRIX_SIZE, FPS / 2)
       .delay(FPS).and().repeat(->
