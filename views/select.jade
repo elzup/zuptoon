@@ -7,10 +7,12 @@ block content
     .team-select
       each team, it in ['赤', '黄']
         div(class='team team' + it)
-          p= team + 'チーム'
+          p
+            a(href='?team=' + it)=team + 'チーム'
     .team-select
       each team, it in ['青', '緑']
         div(class='team team' + (it + 2))
-          p= team + 'チーム'
+          p
+            a(href='?team=' + it)=team + 'チーム'
   h2 操作方法
   img#help(src="/images/help.png")

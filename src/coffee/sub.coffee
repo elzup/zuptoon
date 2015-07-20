@@ -112,7 +112,6 @@ $ ->
   get_params = ElzupUtils.get_parameters()
   socket.emit 'new',
     room: 'user'
-    type: get_params['type']
     team: get_params['team']
   # TODO: remove debug outputs
   console.log('socket connect try')

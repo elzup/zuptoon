@@ -195,7 +195,6 @@ $ ->
     a: new Victor(0.8, 0.8)
     pre_pos: new Victor(0, 0)
     team: 0
-    type: PlayerType.gun
     col: null
     last_shot_frame: 0
     is_die: false
