@@ -4,11 +4,13 @@ block content
   #wrapper
     h1 コントローラ, チーム選択
 
-    each team, it in ['赤', '黄', '青', '緑']
-      div(class='team team' + it)
-        p= team + 'チーム'
-        ul
-          each wepon, iw in ['ウォーター', 'ライフル', 'ローラー']
-            li
-              a(href='?type=' + iw + '&team=' + it)=wepon
+    .team-select
+      each team, it in ['赤', '黄']
+        div(class='team team' + it)
+          p= team + 'チーム'
+    .team-select
+      each team, it in ['青', '緑']
+        div(class='team team' + (it + 2))
+          p= team + 'チーム'
+  h2 操作方法
   img#help(src="/images/help.png")

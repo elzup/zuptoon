@@ -9,23 +9,30 @@ a
   color #00B7FF
 
 team-color(col)
+  padding 10px
+  background col
   p
-    color col
-  li
-    background col
+    color white
 
-h1
+h1, h2
   margin-left 20px
-.team
-  margin-left 10px
-  &.team0
-    team-color(red)
-  &.team1
-    team-color(orange)
-  &.team2
-    team-color(blue)
-  &.team3
-    team-color(green)
+
+.team-select
+  display flex
+  justify-content space-around
+  .team
+    width 30%
+    text-align center
+    box-shadow 0 0 2px
+    margin 10px
+    &.team0
+      team-color(red)
+    &.team1
+      team-color(orange)
+    &.team2
+      team-color(blue)
+    &.team3
+      team-color(green)
 
   ul
     display flex
@@ -40,6 +47,7 @@ h1
       a
         color white
         display block
+
 img#help
   width 100%
 
