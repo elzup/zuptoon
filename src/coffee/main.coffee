@@ -223,7 +223,6 @@ $ ->
     shotable: ->
       @pre_shot_age + SHOT_RAPID_DELAY < @age
 
-
     shot: (@rad, @pow)->
       if @mp < 5 or @is_die or not @shotable()
         return
@@ -238,12 +237,18 @@ $ ->
       pos = new Victor(0, 0).copy(@pos).add(new Victor(0, 0).copy(v).multiply(new Victor(3, 3)))
       shot = new Shot(pos, v, @team)
       game.rootScene.addChild(shot)
+      @rotation = 180 - @rad * 180 / Math.PI
       update_dom(this)
 
     walk: (@rad, @pow) ->
       mr = @pow / 90
       @v.add new Victor(0, 2).rotate(-@rad).multiply(new Victor(mr, mr))
-      @rotation = 180 - @rad * 180 / Math.PI
+      if @shotable()
+        @rotation = 180 - @rad * 180 / Math.PI
+
+    super_walk: ->
+      rad = Math.atan2(@v.x, @v.y)
+      @walk(rad, 1000)
 
     onenterframe: ->
       if @moved()
@@ -627,10 +632,10 @@ $ ->
 
   socket.on 'shake', (data) ->
     player = get_player(data.id)
+    if !player?
+      return
     console.log "Shake!"
-    console.log player
-    # TODO: create super action
-    # player.shot()
+    player.super_walk()
 
   socket.on 'count', (data) ->
     $count = $('#count')
@@ -659,11 +664,6 @@ $ ->
     player_group.removeChild(player)
 
 update_dom = (player) ->
-  console.log "updateDOM", player
   pElem = ($ ".player[user_id=#{player.id}]")
-  console.log(pElem)
-  console.log(pElem.children('.hp'))
-  console.log(pElem.children('.mp'))
-
   pElem.children('.hp').html("HP: #{player.hp}")
   pElem.children('.mp').html("MP: #{player.mp}")
