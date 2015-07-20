@@ -22,6 +22,10 @@ MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
 PLAYER_DIE_RADIUS = 100
 
+Controller =
+  left: 0
+  right: 1
+
 debug_surface = null
 
 BlockType =
