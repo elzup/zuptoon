@@ -202,7 +202,7 @@ $ ->
     mp: 100
     hp: 100
     pointer: null
-    delay: SHOT_RAPID_DELAY
+    pre_shot_age: 0
 
     initialize: (@id, @team) ->
       enchant.Sprite.call(this, 32, 32)
@@ -220,20 +220,25 @@ $ ->
         @die()
       update_dom(this)
 
-    shot: (x, y)->
-      if @v.length() == 0 or @mp < 5
+    shotable: ->
+      @pre_shot_age + SHOT_RAPID_DELAY < @age
+
+
+    shot: (@rad, @pow)->
+      if @mp < 5 or @is_die or not @shotable()
         return
       # TODO: mp 消費量バランス
       @mp -= 5
       console.log "shot"
-      v = new Victor(0, 0).copy(@v).normalize().multiply(new Victor(10, 10))
-      pos = new Victor(0, 0).copy(@pos).add(v)
+      # mr = @pow / 90 * 10
+      mr = 10
+      v = new Victor(0, 1).rotate(-@rad).normalize().multiply(new Victor(mr, mr))
+      @pre_shot_age = @age
+
+      pos = new Victor(0, 0).copy(@pos).add(new Victor(0, 0).copy(v).multiply(new Victor(3, 3)))
       shot = new Shot(pos, v, @team)
       game.rootScene.addChild(shot)
       update_dom(this)
-
-    reloaded: ->
-      game.frame - @last_shot_frame > @delay
 
     walk: (@rad, @pow) ->
       mr = @pow / 90
@@ -615,14 +620,17 @@ $ ->
     # controller touch leaved
     if data.pow == 0
       return
-    player.walk(data.rad, data.pow)
+    if data.con == Controller.left
+      player.walk(data.rad, data.pow)
+    else
+      player.shot(data.rad, data.pow)
 
   socket.on 'shake', (data) ->
-    # TODO: create action
     player = get_player(data.id)
     console.log "Shake!"
     console.log player
-    player.shot()
+    # TODO: create super action
+    # player.shot()
 
   socket.on 'count', (data) ->
     $count = $('#count')
