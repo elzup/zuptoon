@@ -56,3 +56,22 @@ img#help
     height 100px
     padding 3px
 
+player-card(col)
+  background col + #666
+
+#players-box
+  display flex
+  .player
+    color white
+    margin 10px
+    padding 10px
+    border 1px solid
+    &[team="0"]
+      player-card(red)
+    &[team="1"]
+      player-card(orange)
+    &[team="2"]
+      player-card(blue)
+    &[team="3"]
+      player-card(green)
+

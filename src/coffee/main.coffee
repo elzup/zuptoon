@@ -149,6 +149,10 @@ $ ->
       @moveTo(@pos.x, @pos.y)
       # @v.multiply(@a)
 
+      # ブロック衝突判定
+      if map_type(@ox(), @oy()) in [BlockType.BLOCK, BlockType.WALL]
+        game.rootScene.removeChild(this)
+
       # MP の分布変更
       if @age % 10 == 0
         [mx, my] = map_pos(@ox(), @oy())
@@ -164,13 +168,10 @@ $ ->
         dx = player.ox() - @ox()
         dy = player.oy() - @oy()
         if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
+          player.v.add(@v.multiply(new Victor(3.0, 3.0)))
           game.rootScene.removeChild(this)
           player.damage()
           return
-
-      # ブロック衝突判定
-      if map_type(@ox(), @oy()) in [BlockType.BLOCK, BlockType.WALL]
-        game.rootScene.removeChild(this)
 
     r: ->
       @width / 2
@@ -210,6 +211,7 @@ $ ->
 
     damage: ->
       @hp -= 20
+      update_dom(this)
 
     shot: (x, y)->
       if @v.length() == 0
@@ -220,8 +222,8 @@ $ ->
       v = new Victor(0, 0).copy(@v).normalize().multiply(new Victor(10, 10))
       pos = new Victor(0, 0).copy(@pos).add(v)
       shot = new Shot(pos, v, @team)
-      console.log shot
       game.rootScene.addChild(shot)
+      update_dom(this)
 
     reloaded: ->
       game.frame - @last_shot_frame > @delay
@@ -234,7 +236,6 @@ $ ->
     onenterframe: ->
       if @moved()
         @frame = @team * 5 + [Frame.Walk, Frame.Stand][ElzupUtils.period(@age, 8, 2)]
-        console.log(@frame)
       else
         @frame = @team * 5 + Frame.Stand
       @pre_pos.copy(@pos)
@@ -323,6 +324,7 @@ $ ->
           if baseMap[my][mx] == BlockType.MP
             baseMap[my][mx] = BlockType.NONE
             @mp += 1
+      update_dom(this)
       map.loadData(baseMap)
 
 
@@ -618,11 +620,31 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
+    nameElem = ($ '<div/>').attr(
+      user_id: data.id
+      class: 'player'
+      team: data.team
+    )
+    nameElem.append(($ '<p/>').addClass('name').html(data.id))
+    nameElem.append(($ '<p/>').addClass('hp').html("HP: 100"))
+    nameElem.append(($ '<p/>').addClass('mp').html("MP: 100"))
+
+    ($ '#players-box').append(nameElem)
     new Player(data.id, parseInt(data.team))
 
   socket.on 'removeuser', (data) ->
     console.log('delete user')
     console.log(data)
     player = get_player(data.id)
+    ($ ".player[user_id=#{player.id}]").remove()
     player_group.removeChild(player)
 
+update_dom = (player) ->
+  console.log "updateDOM", player
+  pElem = ($ ".player[user_id=#{player.id}]")
+  console.log(pElem)
+  console.log(pElem.children('.hp'))
+  console.log(pElem.children('.mp'))
+
+  pElem.children('.hp').html("HP: #{player.hp}")
+  pElem.children('.mp').html("MP: #{player.mp}")
