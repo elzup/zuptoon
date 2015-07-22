@@ -50,6 +50,8 @@ gulp.task 'template', ->
 gulp.task 'script', ->
   gulp
     .src config.scripts.watch
+    .pipe $.coffeelint()
+    .pipe $.coffeelint.reporter()
     .pipe $.coffee()
     .on 'error', handleError
     .pipe gulp.dest config.scripts.destination
