@@ -399,8 +399,7 @@ $ ->
 
     map = new Map(MAP_M, MAP_M)
     map.image = game.assets['/images/map0.png']
-    baseMap = create_map()
-    map.loadData(baseMap)
+    baseMap = setup_map()
 
     timer_label = new Label()
     timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
@@ -460,7 +459,7 @@ $ ->
       game_init()
     game.rootScene.addChild(btn)
 
-  create_map = ->
+  setup_map = ->
     baseMap = null
     if STAGE == Stage.flat or STAGE == Stage.blocks
       baseMap = [0...MAP_HEIGHT_N]
@@ -479,21 +478,21 @@ $ ->
             baseMap[j][i] = BlockType.BLOCK
           if j == 0 or j == MAP_HEIGHT_N - 1 or i == 0 or i == MAP_WIDTH_N - 1
             baseMap[j][i] = BlockType.WALL
+      map.loadData(baseMap)
     else
       if STAGE == Stage.wall
-        baseMap = Maps.wall()
+        filename = "/data/map_wall.json"
       else if STAGE == Stage.vortex
-        baseMap = Maps.vortex()
+        filename = "/data/map_vortex.json"
       else
-        baseMap = Maps.sprite()
-      for j in [0...MAP_HEIGHT_N]
-        for i in [0...MAP_WIDTH_N]
-          p = baseMap[j][i]
-          if not is_block(p) and p != BlockType.NONE
-            init_pos[p - 1] = new Victor(i, j)
-    # else if STAGE == Stage.vortex
-    # else if STAGE == Stage.sprite
-    baseMap
+        filename = "/data/map_sprite.json"
+      $.getJSON filename, (baseMap) ->
+        for j in [0...MAP_HEIGHT_N]
+          for i in [0...MAP_WIDTH_N]
+            p = baseMap[j][i]
+            if not is_block(p) and p != BlockType.NONE
+              init_pos[p - 1] = new Victor(i, j)
+        map.loadData(baseMap)
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
