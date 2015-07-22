@@ -22,6 +22,12 @@ MAP_HEIGHT = MAP_HEIGHT_NUM * MAP_MATRIX_SIZE
 
 PLAYER_DIE_RADIUS = 100
 
+zerovic = ->
+  new Victor(0, 0)
+
+clone = (v) ->
+  new Victor(0, 0).copy(v)
+
 Controller =
   left: 0
   right: 1
@@ -63,19 +69,10 @@ FOOTER_HEIGHT = 80
 
 # SCORE_AVG = MAP_WIDTH_NUM * MAP_HEIGHT_NUM / 4
 init_pos = [
-  {
-    x: MAP_WIDTH / 7
-    y: MAP_HEIGHT / 10
-  }, {
-    x: MAP_WIDTH * 6 / 7
-    y: MAP_HEIGHT / 10
-  }, {
-    x: MAP_WIDTH / 7
-    y: MAP_HEIGHT * 6 / 10
-  }, {
-    x: MAP_WIDTH * 6 / 7
-    y: MAP_HEIGHT * 9 / 10
-  }
+  new Victor(MAP_WIDTH / 7, MAP_HEIGHT / 10)
+  new Victor(MAP_WIDTH * 6 / 7, MAP_HEIGHT / 10)
+  new Victor(MAP_WIDTH / 7, MAP_HEIGHT * 6 / 10)
+  new Victor(MAP_WIDTH * 6 / 7, MAP_HEIGHT * 9 / 10)
 ]
 
 V_SHOT = 40.0
@@ -133,8 +130,8 @@ $ ->
   socket = io.connect()
 
   Shot = enchant.Class.create enchant.Sprite,
-    pos: new Victor(0, 0)
-    v: new Victor(0, 0)
+    pos: zerovic()
+    v: zerovic()
     a: new Victor(1.0, 1.0)
     mp: 5
 
@@ -154,12 +151,12 @@ $ ->
       # @v.multiply(@a)
 
       # ブロック衝突判定
-      if map_type(@ox(), @oy()) in [BlockType.BLOCK, BlockType.WALL]
+      if map_type(@opos()) in [BlockType.BLOCK, BlockType.WALL]
         game.rootScene.removeChild(this)
 
       # MP の分布変更
       if @age % 10 == 0
-        [mx, my] = map_pos(@ox(), @oy())
+        [mx, my] = to_mpos(@opos())
         console.log "k", baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
         if baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
           baseMap[my][mx] = BlockType.MP
@@ -190,10 +187,10 @@ $ ->
   Player = enchant.Class.create enchant.Sprite,
     id: null
     sp: PLAYER_SPEED
-    pos: new Victor(0, 0)
-    v: new Victor(0, 0)
+    pos: zerovic()
+    v: zerovic()
     a: new Victor(0.8, 0.8)
-    pre_pos: new Victor(0, 0)
+    pre_pos: zerovic()
     team: 0
     col: null
     last_shot_frame: 0
@@ -205,7 +202,7 @@ $ ->
 
     initialize: (@id, @team) ->
       enchant.Sprite.call(this, 32, 32)
-      @pos = new Victor(init_pos[@team].x * MAP_MATRIX_SIZE, init_pos[@team].y * MAP_MATRIX_SIZE).subtract(new Victor(@width / 2, @width / 2))
+      @pos = zerovic().copy(init_pos[@team]).multiply(new Victor(MAP_MATRIX_SIZE, MAP_MATRIX_SIZE)).subtract(new Victor(@width / 2, @width / 2))
       @moveTo(@pos.x, @pos.y)
       @image = game.assets['/images/player.png']
       @frame = @team * 5
@@ -233,7 +230,7 @@ $ ->
       v = new Victor(0, 1).rotate(-@rad).normalize().multiply(new Victor(mr, mr))
       @pre_shot_age = @age
 
-      pos = new Victor(0, 0).copy(@pos).add(new Victor(0, 0).copy(v).multiply(new Victor(3, 3)))
+      pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
       shot = new Shot(pos, v, @team)
       game.rootScene.addChild(shot)
       @rotation = 180 - @rad * 180 / Math.PI
@@ -266,13 +263,13 @@ $ ->
       # @pos.add(new Victor(vx, vy))
       @v.multiply(@a)
       if @v.length() < 0.5
-        @v = new Victor(0, 0)
+        @v = zerovic()
       @moveTo(@pos.x, @pos.y)
 
     check_conf_pos: ->
       vx = @v.x
       vy = @v.y
-      k = new Victor(0, 0).copy(@v)
+      k = clone(@v)
 
       dx = Math.abs(vx)
       dy = Math.abs(vy)
@@ -283,8 +280,8 @@ $ ->
       for p in cposs
         tx = p.x + @v.x
         # mx, my 単体取得
-        [msx, tmp] = map_pos(p.x, p.y)
-        [mex, my] = map_pos(tx, p.y)
+        [msx, my] = to_mpos(p)
+        mex = to_mx(tx)
         vxt = Math.abs vx
         msx += 1
         if @v.x < 0
@@ -308,8 +305,8 @@ $ ->
       for p in cposs
         ty = p.y + @v.y
         p.x += dx
-        [tmp, msy] = map_pos(p.x, p.y)
-        [mx, mey] = map_pos(p.x, ty)
+        [tmp, msy] = to_mpos(p)
+        mey = to_my(ty)
         vyt = Math.abs vy
         msy += 1
         if @v.y < 0
@@ -333,8 +330,8 @@ $ ->
       @v = k
 
     get_mps: ->
-      [@msx, @msy] = map_pos(@pos.x, @pos.y)
-      [@mex, @mey] = map_pos(@pos.x + @width, @pos.y + @height)
+      [@msx, @msy] = to_mpos(@pos)
+      [@mex, @mey] = to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
       for my in [@msy..@mey]
         for mx in [@msx..@mex]
           if baseMap[my][mx] == BlockType.MP
@@ -390,9 +387,8 @@ $ ->
     # player は手前
 
     for i, p of init_pos
-      [x, y] = map_pos(p.x, p.y)
-      init_pos[i].x = x
-      init_pos[i].y = y
+      init_pos[i] = to_mpos(p)
+
     map = new Map(MAP_MATRIX_SIZE, MAP_MATRIX_SIZE)
     map.image = game.assets['/images/map0.png']
     baseMap = create_map()
@@ -484,14 +480,14 @@ $ ->
         for i in [0...MAP_WIDTH_NUM]
           p = baseMap[j][i]
           if not is_block(p) and p != BlockType.NONE
-            init_pos[p - 1] = { x: i, y: j }
+            init_pos[p - 1] = new Victor(i, j)
     # else if STAGE == Stage.vortex
     # else if STAGE == Stage.sprite
     baseMap
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
-    [mx, my] = map_pos(x, y)
+    [mx, my] = to_mpos(new Victor(x, y))
     mr = Math.floor(r / MAP_MATRIX_SIZE)
     mr2 = mr * mr
     for j in [-mr..mr]
@@ -517,13 +513,17 @@ $ ->
       return
     score[pre - 1] -= 1
 
-  map_pos = (sx, sy, r = 0) ->
-    mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_MATRIX_SIZE), MAP_WIDTH_NUM - 1)
-    my = ElzupUtils.clamp(Math.floor((sy + r) / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM - 1)
-    [mx, my]
+  to_mpos = (spos, r = 0) ->
+    [to_mx(spos.x + r), to_my(spos.y + r)]
+
+  to_mx = (sx) ->
+    ElzupUtils.clamp(Math.floor(sx / MAP_MATRIX_SIZE), MAP_WIDTH_NUM - 1)
+
+  to_my = (sy) ->
+    ElzupUtils.clamp(Math.floor(sy / MAP_MATRIX_SIZE), MAP_HEIGHT_NUM - 1)
 
   to_spos = (mx, my) ->
-    [to_sx(mx), to_sy(my)]
+    new Victor(to_sx(mx), to_sy(my))
 
   to_sx = (mx) ->
     MAP_MATRIX_SIZE * mx
@@ -532,8 +532,8 @@ $ ->
     MAP_MATRIX_SIZE * my
 
 
-  map_type = (sx, sy) ->
-    [mx, my] = map_pos(sx, sy)
+  map_type = (spos) ->
+    [mx, my] = to_mpos(spos)
     baseMap[my][mx]
 
   is_player_block_type = (type) ->
@@ -570,7 +570,7 @@ $ ->
     for i in [0...c]
       px = x2 + (i / c) * (x1 - x2)
       py = y2 + (i / c) * (y1 - y2)
-      [mx, my] = map_pos(px, py)
+      [mx, my] = to_mpos(px, py)
       for dx in [-1...2]
         for dy in [-1...2]
           fill_map(mx + dx, my + dy, team)
@@ -585,11 +585,11 @@ $ ->
     for player in player_group.childNodes
       if player.team == team or player.is_die
         continue
-      [mpx, mpy] = map_pos(player.ox(), player.oy())
+      [mpx, mpy] = to_mpos(player.ox(), player.oy())
       for i in [0...c]
         px = x2 + (i / c) * (x1 - x2)
         py = y2 + (i / c) * (y1 - y2)
-        [mx, my] = map_pos(px, py)
+        [mx, my] = to_mpos(px, py)
         if (-1 <= mx - mpx <= 1 && -1 <= my - mpy <= 1)
           fill_pos_circle(player.ox(), player.oy(), PLAYER_DIE_RADIUS, team)
           player.die()
