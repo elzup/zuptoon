@@ -71,10 +71,10 @@ GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
 FOOTER_HEIGHT = 80
 
 init_pos = [
-  new Victor(MAP_WIDTH / 7, MAP_HEIGHT / 10)
-  new Victor(MAP_WIDTH * 6 / 7, MAP_HEIGHT / 10)
-  new Victor(MAP_WIDTH / 7, MAP_HEIGHT * 6 / 10)
-  new Victor(MAP_WIDTH * 6 / 7, MAP_HEIGHT * 9 / 10)
+  new Victor(MAP_WIDTH_N / 7, MAP_HEIGHT_N / 10)
+  new Victor(MAP_WIDTH_N * 6 / 7, MAP_HEIGHT_N / 10)
+  new Victor(MAP_WIDTH_N / 7, MAP_HEIGHT_N * 6 / 10)
+  new Victor(MAP_WIDTH_N * 6 / 7, MAP_HEIGHT_N * 9 / 10)
 ]
 
 V_SHOT = 40.0
@@ -399,7 +399,7 @@ $ ->
 
     map = new Map(MAP_M, MAP_M)
     map.image = game.assets['/images/map0.png']
-    baseMap = setup_map()
+    setup_map()
 
     timer_label = new Label()
     timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
@@ -460,7 +460,6 @@ $ ->
     game.rootScene.addChild(btn)
 
   setup_map = ->
-    baseMap = null
     if STAGE == Stage.flat or STAGE == Stage.blocks
       baseMap = [0...MAP_HEIGHT_N]
       for j in baseMap
@@ -486,13 +485,15 @@ $ ->
         filename = "/data/map_vortex.json"
       else
         filename = "/data/map_sprite.json"
-      $.getJSON filename, (baseMap) ->
+      $.getJSON filename, (data) ->
+        baseMap = data
         for j in [0...MAP_HEIGHT_N]
           for i in [0...MAP_WIDTH_N]
             p = baseMap[j][i]
             if not is_block(p) and p != BlockType.NONE
               init_pos[p - 1] = new Victor(i, j)
         map.loadData(baseMap)
+        console.log("map loaded")
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
