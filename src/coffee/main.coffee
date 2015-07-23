@@ -34,6 +34,7 @@ zerovic = ->
   new Victor(0, 0)
 
 clone = (v) ->
+  console.log("ic", v)
   new Victor(0, 0).copy(v)
 
 Controller =
@@ -116,7 +117,6 @@ class Game
   addPlayer: (id, team) ->
     player = new Player(id, team)
     @players[id] = player
-    core.rootScene.addChild(player)
 
   removePlayer: (id) ->
     if !@players[id]?
@@ -163,10 +163,206 @@ class Game
         @map.loadData(@baseMap)
         console.log("map loaded")
 
+  player_dash: (id) ->
+    if !@players[id]?
+      return
+    @players[id].super_walk()
 
 class Stage
   @is_block: (type) ->
     type in [BlockType.BLOCK, BlockType.WALL]
+
+class Player
+  id: null
+  sp: PLAYER_SPEED
+  pos: zerovic()
+  v: zerovic()
+  a: new Victor(0.8, 0.8)
+  pre_pos: zerovic()
+  team: 0
+  col: null
+  last_shot_frame: 0
+  is_die: false
+  mp: 100
+  hp: 100
+  pointer: null
+  pre_shot_age: 0
+
+  constructor: (@id, @team) ->
+    @S = new Sprite(32, 32)
+    @pos = clone(init_pos[@team]).multiply(MAP_M_VEC)
+    @pos.subtract(new Victor(@r(), @r()))
+    @S.moveTo(@pos.x, @pos.y)
+    @S.image = core.assets['/images/player.png']
+    @S.frame = @team * 5
+    @col = COL_LIB[@team]
+    @S._style.zIndex = -PLAYER_Z_SHIFT
+    DomManager.addPlayerDom(this)
+    DomManager.updatePlayerDom(this)
+    core.rootScene.addChild(@S)
+
+  damage: ->
+    @hp -= 20
+    if @hp <= 0
+      @die()
+    DomManager.updatePlayerDom(this)
+
+  shotable: ->
+    @pre_shot_age + SHOT_RAPID_DELAY < @S.age
+
+  shot: (@rad, @pow)->
+    if @mp < 5 or @is_die or not @shotable()
+      return
+    # TODO: mp 消費量バランス
+    @mp -= 5
+    console.log "shot"
+    # mr = @pow / 90 * 10
+    mr = 10
+    v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
+    @pre_shot_age = @S.age
+
+    pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
+    shot = new Shot(pos, v, @team)
+    core.rootScene.addChild(shot)
+    @rotation = 180 - @rad * 180 / Math.PI
+    update_dom(this)
+
+  walk: (@rad, @pow) ->
+    mr = @pow / 90
+    @v.add new Victor(0, 2).rotate(-@rad).multiply(new Victor(mr, mr))
+    if @shotable()
+      @rotation = 180 - @rad * 180 / Math.PI
+
+  super_walk: ->
+    rad = Math.atan2(@v.x, @v.y)
+    @walk(rad, 1000)
+
+  onenterframe: ->
+    if @moved()
+      f = [Frame.Walk, Frame.Stand][ElzupUtils.period(@S.age, 8, 2)]
+      @S.frame = @team * 5 + f
+    else
+      @S.frame = @team * 5 + Frame.Stand
+    @pre_pos.copy(@pos)
+
+    if @is_die
+      return
+    if @v.length() == 0
+      return
+
+    @check_conf_pos()
+    @get_mps()
+    # @pos.add(new Victor(vx, vy))
+    @v.multiply(@a)
+    if @v.length() < 0.5
+      @v = zerovic()
+    @S.moveTo(@pos.x, @pos.y)
+
+  check_conf_pos: ->
+    vx = @v.x
+    vy = @v.y
+    k = clone(@v)
+
+    dx = Math.abs(vx)
+    dy = Math.abs(vy)
+    cposs = []
+    for deg in [0...360] by 30
+      rad = deg * Math.PI * 2 / 360
+      cposs.push(to_xy(rad).multiply(new Victor(@r(), @r())).add(@opos()))
+
+    for p in cposs
+      tx = p.x + @v.x
+      # mx, my 単体取得
+      [msx, my] = to_mpos(p)
+      mex = to_mx(tx)
+      vxt = Math.abs vx
+      msx += 1
+      if @v.x < 0
+        msx -= 2
+      for mx in [msx..mex]
+        if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+          tsx = to_sx(mx)
+          k.x = 0
+          if @v.x >= 0
+            vxt = tsx - p.x
+          else
+            vxt = p.x - (tsx + MAP_M)
+          vxt -= 5
+          break
+      dx = Math.min(dx, vxt)
+
+    if vx < 0
+      dx *= -1
+    @pos.x += dx
+
+    for p in cposs
+      ty = p.y + @v.y
+      p.x += dx
+      [tmp, msy] = to_mpos(p)
+      mey = to_my(ty)
+      vyt = Math.abs vy
+      msy += 1
+      if @v.y < 0
+        msy -= 2
+      for my in [msy..mey]
+        if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+          tsy = to_sy(my)
+          k.y = 0
+          if @v.y >= 0
+            vyt = tsy - p.y
+          else
+            vyt = p.y - (tsy + MAP_M)
+          vyt -= 5
+          break
+      dy = Math.min(dy, vyt)
+
+    if vy < 0
+      dy *= -1
+
+    @pos.y += dy
+    @v = k
+
+  get_mps: ->
+    [@msx, @msy] = to_mpos(@pos)
+    [@mex, @mey] = to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
+    for my in [@msy..@mey]
+      for mx in [@msx..@mex]
+        if game.baseMap[my][mx] == BlockType.MP
+          game.baseMap[my][mx] = BlockType.NONE
+          @mp += 3
+    update_dom(this)
+    game.map.loadData(game.baseMap)
+
+
+  moved: ->
+    @v.length() != 0
+
+  die: ->
+    @opacity = 0.5
+    @is_die = true
+    # @S.frame = Frame.None
+    # @diemove()
+
+  diemove: ->
+    @S.tl.clear()
+    @S.tl.moveTo(init_pos[@team].x * MAP_M,
+                      init_pos[@team].y * MAP_M,
+                      FPS / 2)
+    .delay(FPS).and().repeat(->
+      @opacity = @S.age % 2
+    , FPS).then(->
+      @opacity = 1.0
+      @is_die = false
+    )
+
+  r: ->
+    @width / 2
+  ox: ->
+    @pos.x + @width / 2
+  oy: ->
+    @pos.y + @height / 2
+  opos: ->
+    new Victor(@ox(), @oy())
 
 $ ->
   # enchant game
@@ -206,7 +402,7 @@ $ ->
       @image = core.assets['/images/item.png']
       @frame = Frame.ItemShot
       @moveTo(@pos.x, @pos.y)
-      @tl.scaleTo(0.5, 0.5)
+      @S.tl.scaleTo(0.5, 0.5)
       rad = Math.atan2(@v.x, @v.y)
       @rotation = 180 - rad * 180 / Math.PI
 
@@ -220,7 +416,7 @@ $ ->
         core.rootScene.removeChild(this)
 
       # MP の分布変更
-      if @age % 10 == 0
+      if @S.age % 10 == 0
         [mx, my] = to_mpos(@opos())
         console.log "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
         if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
@@ -239,195 +435,6 @@ $ ->
           core.rootScene.removeChild(this)
           player.damage()
           return
-
-    r: ->
-      @width / 2
-    ox: ->
-      @pos.x + @width / 2
-    oy: ->
-      @pos.y + @height / 2
-    opos: ->
-      new Victor(@ox(), @oy())
-
-  Player = enchant.Class.create enchant.Sprite,
-    id: null
-    sp: PLAYER_SPEED
-    pos: zerovic()
-    v: zerovic()
-    a: new Victor(0.8, 0.8)
-    pre_pos: zerovic()
-    team: 0
-    col: null
-    last_shot_frame: 0
-    is_die: false
-    mp: 100
-    hp: 100
-    pointer: null
-    pre_shot_age: 0
-
-    initialize: (@id, @team) ->
-      enchant.Sprite.call(this, 32, 32)
-      @pos = clone(init_pos[@team]).multiply(MAP_M_VEC)
-      @pos.subtract(new Victor(@r(), @r()))
-      @moveTo(@pos.x, @pos.y)
-      @image = core.assets['/images/player.png']
-      @frame = @team * 5
-      @col = COL_LIB[@team]
-      @_style.zIndex = -PLAYER_Z_SHIFT
-      DomManager.addPlayerDom(this)
-      DomManager.updatePlayerDom(this)
-
-    damage: ->
-      @hp -= 20
-      if @hp <= 0
-        @die()
-      DomManager.updatePlayerDom(this)
-
-    shotable: ->
-      @pre_shot_age + SHOT_RAPID_DELAY < @age
-
-    shot: (@rad, @pow)->
-      if @mp < 5 or @is_die or not @shotable()
-        return
-      # TODO: mp 消費量バランス
-      @mp -= 5
-      console.log "shot"
-      # mr = @pow / 90 * 10
-      mr = 10
-      v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
-      @pre_shot_age = @age
-
-      pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
-      shot = new Shot(pos, v, @team)
-      core.rootScene.addChild(shot)
-      @rotation = 180 - @rad * 180 / Math.PI
-      update_dom(this)
-
-    walk: (@rad, @pow) ->
-      mr = @pow / 90
-      @v.add new Victor(0, 2).rotate(-@rad).multiply(new Victor(mr, mr))
-      if @shotable()
-        @rotation = 180 - @rad * 180 / Math.PI
-
-    super_walk: ->
-      rad = Math.atan2(@v.x, @v.y)
-      @walk(rad, 1000)
-
-    onenterframe: ->
-      if @moved()
-        f = [Frame.Walk, Frame.Stand][ElzupUtils.period(@age, 8, 2)]
-        @frame = @team * 5 + f
-      else
-        @frame = @team * 5 + Frame.Stand
-      @pre_pos.copy(@pos)
-
-      if @is_die
-        return
-      if @v.length() == 0
-        return
-
-      @check_conf_pos()
-      @get_mps()
-      # @pos.add(new Victor(vx, vy))
-      @v.multiply(@a)
-      if @v.length() < 0.5
-        @v = zerovic()
-      @moveTo(@pos.x, @pos.y)
-
-    check_conf_pos: ->
-      vx = @v.x
-      vy = @v.y
-      k = clone(@v)
-
-      dx = Math.abs(vx)
-      dy = Math.abs(vy)
-      cposs = []
-      for deg in [0...360] by 30
-        rad = deg * Math.PI * 2 / 360
-        cposs.push(to_xy(rad).multiply(new Victor(@r(), @r())).add(@opos()))
-
-      for p in cposs
-        tx = p.x + @v.x
-        # mx, my 単体取得
-        [msx, my] = to_mpos(p)
-        mex = to_mx(tx)
-        vxt = Math.abs vx
-        msx += 1
-        if @v.x < 0
-          msx -= 2
-        for mx in [msx..mex]
-          if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
-            tsx = to_sx(mx)
-            k.x = 0
-            if @v.x >= 0
-              vxt = tsx - p.x
-            else
-              vxt = p.x - (tsx + MAP_M)
-            vxt -= 5
-            break
-        dx = Math.min(dx, vxt)
-
-      if vx < 0
-        dx *= -1
-      @pos.x += dx
-
-      for p in cposs
-        ty = p.y + @v.y
-        p.x += dx
-        [tmp, msy] = to_mpos(p)
-        mey = to_my(ty)
-        vyt = Math.abs vy
-        msy += 1
-        if @v.y < 0
-          msy -= 2
-        for my in [msy..mey]
-          if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
-            tsy = to_sy(my)
-            k.y = 0
-            if @v.y >= 0
-              vyt = tsy - p.y
-            else
-              vyt = p.y - (tsy + MAP_M)
-            vyt -= 5
-            break
-        dy = Math.min(dy, vyt)
-
-      if vy < 0
-        dy *= -1
-
-      @pos.y += dy
-      @v = k
-
-    get_mps: ->
-      [@msx, @msy] = to_mpos(@pos)
-      [@mex, @mey] = to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
-      for my in [@msy..@mey]
-        for mx in [@msx..@mex]
-          if game.baseMap[my][mx] == BlockType.MP
-            game.baseMap[my][mx] = BlockType.NONE
-            @mp += 3
-      update_dom(this)
-      game.map.loadData(game.baseMap)
-
-
-    moved: ->
-      @v.length() != 0
-
-    die: ->
-      @opacity = 0.5
-      @is_die = true
-      # @frame = Frame.None
-      # @diemove()
-
-    diemove: ->
-      @tl.clear()
-      @tl.moveTo(init_pos[@team].x * MAP_M, init_pos[@team].y * MAP_M, FPS / 2)
-      .delay(FPS).and().repeat(->
-        @opacity = @age % 2
-      , FPS).then(->
-        @opacity = 1.0
-        @is_die = false
-      )
 
     r: ->
       @width / 2
@@ -531,8 +538,8 @@ $ ->
     update_score()
 
   fill_map = (mx, my, team) ->
-    if (ElzupUtils.clamp(my, MAP_HEIGHT_N - 2, 1) != my or
-        ElzupUtils.clamp(mx, MAP_WIDTH_N - 2, 1) != mx)
+    if ElzupUtils.clamp(my, MAP_HEIGHT_N - 2, 1) != my or
+        ElzupUtils.clamp(mx, MAP_WIDTH_N - 2, 1) != mx
       return
     pre = game.baseMap[my][mx]
     if pre == team + COL_SHIFT or Stage.is_block(pre)
@@ -573,13 +580,6 @@ $ ->
   draw_circle = (x, y, r, col, force = false) ->
     if SHOW_TYPE != ShowType.graphical and !force
       return
-
-  get_player = (id) ->
-    for player in game.players
-      if player.id == id
-        return player
-        break
-    null
 
   kill_player_circle = (x, y, r, team) ->
     r2 = r * r
@@ -671,22 +671,21 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
-    game.addPlayer()
+    game.addPlayer(data.id, data.team)
 
   socket.on 'removeuser', (data) ->
     console.log('delete user')
     console.log(data)
     game.removePlayer(data.id)
 
-
 class DomManager
-  @addPlayerDom: ->
+  @addPlayerDom: (player) ->
     nameElem = ($ '<div/>').attr(
-      user_id: data.id
+      user_id: player.id
       class: 'player'
-      team: data.team
+      team: player.team
     )
-    nameElem.append(($ '<p/>').addClass('name').html(data.id))
+    nameElem.append(($ '<p/>').addClass('name').html(player.id))
     nameElem.append(($ '<p/>').addClass('hp'))
     nameElem.append(($ '<p/>').addClass('mp'))
     ($ '#players-box').append(nameElem)
