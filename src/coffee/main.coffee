@@ -34,7 +34,6 @@ zerovic = ->
   new Victor(0, 0)
 
 clone = (v) ->
-  console.log("ic", v)
   new Victor(0, 0).copy(v)
 
 Controller =
@@ -114,6 +113,10 @@ class Game
     @players = {}
     @setup_map()
 
+  onenterframe: ->
+    for id, player of @players
+      player.onenterframe()
+
   addPlayer: (id, team) ->
     player = new Player(id, team)
     @players[id] = player
@@ -163,10 +166,20 @@ class Game
         @map.loadData(@baseMap)
         console.log("map loaded")
 
-  player_dash: (id) ->
+  walk_player: (id, rad, pow) ->
     if !@players[id]?
       return
-    @players[id].super_walk()
+    @players[id].walk(rad, pow)
+
+  dash_player: (id) ->
+    if !@players[id]?
+      return
+    @players[id].dash()
+
+  shot_player: (id, rad, pow) ->
+    if !@players[id]?
+      return
+    @players[id].shot(rad, pow)
 
 class Stage
   @is_block: (type) ->
@@ -233,7 +246,7 @@ class Player
     if @shotable()
       @rotation = 180 - @rad * 180 / Math.PI
 
-  super_walk: ->
+  dash: ->
     rad = Math.atan2(@v.x, @v.y)
     @walk(rad, 1000)
 
@@ -425,7 +438,7 @@ $ ->
           @mp -= 1
 
       # プレイヤー衝突判定
-      for player in game.players
+      for id, player of @players
         if player.team == @team || player.is_die
           continue
         dx = player.ox() - @ox()
@@ -454,6 +467,11 @@ $ ->
     sp.image = debug_surface
     core.rootScene.addChild(sp)
     game_init()
+
+  core.onenterframe = ->
+    if game is null
+      return
+    game.onenterframe()
 
   core.start()
 
@@ -646,36 +664,24 @@ $ ->
   console.log('socket connect try')
 
   socket.on 'move', (data) ->
-    player = get_player(data.id)
-    if !player?
-      return
-    # controller touch leaved
     if data.pow == 0
       return
     if data.con == Controller.left
-      player.walk(data.rad, data.pow)
+      game.walk_player(data.id, data.rad, data.pow)
     else
-      player.shot(data.rad, data.pow)
+      game.shot_player(data.id, data.rad, data.pow)
 
   socket.on 'shake', (data) ->
-    player = get_player(data.id)
-    if !player?
-      return
-    console.log "Shake!"
-    player.super_walk()
+    game.dash_player(data.id)
 
   socket.on 'count', (data) ->
     $count = $('#count')
     $count.text(data.count)
 
   socket.on 'createuser', (data) ->
-    console.log('create user')
-    console.log(data)
     game.addPlayer(data.id, data.team)
 
   socket.on 'removeuser', (data) ->
-    console.log('delete user')
-    console.log(data)
     game.removePlayer(data.id)
 
 class DomManager
