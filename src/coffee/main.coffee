@@ -25,6 +25,11 @@ PLAYER_DIE_RADIUS = 100
 GAME_FONT = '50px "ヒラギノ角ゴ ProN W3",
  "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif'
 
+# global variables
+
+core = null
+game = null
+
 zerovic = ->
   new Victor(0, 0)
 
@@ -103,26 +108,81 @@ ShowType =
 
 SHOW_TYPE = ShowType.matrix_fill
 
+class Game
+  constructor: ->
+    @players = {}
+    @setup_map()
+
+  addPlayer: (id, team) ->
+    player = new Player(id, team)
+    @players[id] = player
+    core.rootScene.addChild(player)
+
+  removePlayer: (id) ->
+    if !@players[id]?
+      return
+    core.rootScene.removeChild(@players[id])
+    delete @players[id]
+
+  setup_map: ->
+    @map = new Map(MAP_M, MAP_M)
+    @map.image = core.assets['/images/map0.png']
+    core.rootScene.addChild(@map)
+    if STAGE == Stage.flat or STAGE == Stage.blocks
+      @baseMap = [0...MAP_HEIGHT_N]
+      for j in @baseMap
+        @baseMap[j] = [0...MAP_WIDTH_N]
+        for i in @baseMap[j]
+          @baseMap[j][i] = 0
+          span = 30
+          col = 5
+          padding = 5
+          if STAGE == Stage.blocks and
+              padding < j < (MAP_HEIGHT_N - padding) and
+              padding < i < (MAP_WIDTH_N - padding) and
+              (i + 15) % span < col and
+              (j + 15) % span < col
+            @baseMap[j][i] = BlockType.BLOCK
+          if j == 0 or j == MAP_HEIGHT_N - 1 or i == 0 or i == MAP_WIDTH_N - 1
+            @baseMap[j][i] = BlockType.WALL
+      @map.loadData(@baseMap)
+    else
+      if STAGE == Stage.wall
+        filename = "/data/map_wall.json"
+      else if STAGE == Stage.vortex
+        filename = "/data/map_vortex.json"
+      else
+        filename = "/data/map_sprite.json"
+      $.getJSON filename, (data) =>
+        @baseMap = data
+        for j in [0...MAP_HEIGHT_N]
+          for i in [0...MAP_WIDTH_N]
+            p = @baseMap[j][i]
+            if not Stage.is_block(p) and p != BlockType.NONE
+              init_pos[p - 1] = new Victor(i, j)
+        @map.loadData(@baseMap)
+        console.log("map loaded")
+
+
+class Stage
+  @is_block: (type) ->
+    type in [BlockType.BLOCK, BlockType.WALL]
+
 $ ->
   # enchant game
   enchant()
 
   # core setting
-  game = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
-  game.preload ['/images/player.png'
+  core = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
+  core.preload ['/images/player.png'
     '/images/icon0.png'
     '/images/map0.png'
     '/images/item.png']
-  game.fps = FPS
+  core.fps = FPS
 
   # global
   # NOTE: term 言い回しは正当？
   game_term = null
-
-  player_group = null
-
-  map = null
-  baseMap = null
 
   timer_label = null
   score_bar = null
@@ -143,7 +203,7 @@ $ ->
     initialize: (@pos, @v, @team) ->
       enchant.Sprite.call(this, 32, 32)
       # TODO: group
-      @image = game.assets['/images/item.png']
+      @image = core.assets['/images/item.png']
       @frame = Frame.ItemShot
       @moveTo(@pos.x, @pos.y)
       @tl.scaleTo(0.5, 0.5)
@@ -157,26 +217,26 @@ $ ->
 
       # ブロック衝突判定
       if map_type(@opos()) in [BlockType.BLOCK, BlockType.WALL]
-        game.rootScene.removeChild(this)
+        core.rootScene.removeChild(this)
 
       # MP の分布変更
       if @age % 10 == 0
         [mx, my] = to_mpos(@opos())
-        console.log "k", baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
-        if baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
-          baseMap[my][mx] = BlockType.MP
-          map.loadData(baseMap)
+        console.log "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
+        if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
+          game.baseMap[my][mx] = BlockType.MP
+          game.map.loadData(baseMap)
           @mp -= 1
 
       # プレイヤー衝突判定
-      for player in player_group.childNodes
+      for player in game.players
         if player.team == @team || player.is_die
           continue
         dx = player.ox() - @ox()
         dy = player.oy() - @oy()
         if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
           player.v.add(@v.multiply(new Victor(3.0, 3.0)))
-          game.rootScene.removeChild(this)
+          core.rootScene.removeChild(this)
           player.damage()
           return
 
@@ -210,17 +270,18 @@ $ ->
       @pos = clone(init_pos[@team]).multiply(MAP_M_VEC)
       @pos.subtract(new Victor(@r(), @r()))
       @moveTo(@pos.x, @pos.y)
-      @image = game.assets['/images/player.png']
+      @image = core.assets['/images/player.png']
       @frame = @team * 5
       @col = COL_LIB[@team]
       @_style.zIndex = -PLAYER_Z_SHIFT
-      player_group.addChild(@)
+      DomManager.addPlayerDom(this)
+      DomManager.updatePlayerDom(this)
 
     damage: ->
       @hp -= 20
       if @hp <= 0
         @die()
-      update_dom(this)
+      DomManager.updatePlayerDom(this)
 
     shotable: ->
       @pre_shot_age + SHOT_RAPID_DELAY < @age
@@ -238,7 +299,7 @@ $ ->
 
       pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
       shot = new Shot(pos, v, @team)
-      game.rootScene.addChild(shot)
+      core.rootScene.addChild(shot)
       @rotation = 180 - @rad * 180 / Math.PI
       update_dom(this)
 
@@ -295,7 +356,7 @@ $ ->
         if @v.x < 0
           msx -= 2
         for mx in [msx..mex]
-          if baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+          if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
             tsx = to_sx(mx)
             k.x = 0
             if @v.x >= 0
@@ -320,7 +381,7 @@ $ ->
         if @v.y < 0
           msy -= 2
         for my in [msy..mey]
-          if baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+          if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
             tsy = to_sy(my)
             k.y = 0
             if @v.y >= 0
@@ -342,11 +403,11 @@ $ ->
       [@mex, @mey] = to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
       for my in [@msy..@mey]
         for mx in [@msx..@mex]
-          if baseMap[my][mx] == BlockType.MP
-            baseMap[my][mx] = BlockType.NONE
+          if game.baseMap[my][mx] == BlockType.MP
+            game.baseMap[my][mx] = BlockType.NONE
             @mp += 3
       update_dom(this)
-      map.loadData(baseMap)
+      game.map.loadData(game.baseMap)
 
 
     moved: ->
@@ -377,29 +438,25 @@ $ ->
     opos: ->
       new Victor(@ox(), @oy())
 
-  game.onload = ->
+  core.onload = ->
+    game = new Game
 
     ### debug init ###
     sp = new Sprite(2000, 2000)
     debug_surface = new Surface(2000, 2000)
     sp.image = debug_surface
-    game.rootScene.addChild(sp)
+    core.rootScene.addChild(sp)
     game_init()
 
-  game.start()
+  core.start()
 
   game_init = ->
-    game.rootScene.remove()
+    core.rootScene.remove()
     game_term = GameTerm.ready
-    player_group = new Group()
     # player は手前
 
     for i, p of init_pos
       init_pos[i] = to_mpos(p)
-
-    map = new Map(MAP_M, MAP_M)
-    map.image = game.assets['/images/map0.png']
-    setup_map()
 
     timer_label = new Label()
     timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
@@ -407,13 +464,13 @@ $ ->
     timer_label.addEventListener Event.ENTER_FRAME, ->
       if game_term != GameTerm.progress
         return
-      progress = parseInt((game.frame - game_start_time) / game.fps)
+      progress = parseInt((core.frame - game_start_time) / core.fps)
       time = GAME_TIME_LIMIT_SEC - progress
       @text = time + ""
       if (time == GAME_TIME_PRE_FINISH)
         score_cover.tl.scaleTo(1.0, 1.0, FPS * GAME_TIME_PRE_FINISH)
         .delay(FPS).scaleTo(0, 1.0, FPS * 3).then ->
-          game.rootScene.removeChild(@)
+          core.rootScene.removeChild(@)
 
       if (time == 0)
         game_result()
@@ -433,20 +490,18 @@ $ ->
     margin = 20
     btn.moveTo(margin, MAP_HEIGHT + margin)
     btn.ontouchstart = ->
-      game.rootScene.removeChild(@)
+      core.rootScene.removeChild(@)
       game_start()
 
-    game.rootScene.backgroundColor = "#AAA"
-    game.rootScene.addChild(map)
-    game.rootScene.addChild(player_group)
-    game.rootScene.addChild(score_bar)
-    game.rootScene.addChild(score_cover)
-    game.rootScene.addChild(btn)
-    game.rootScene.addChild(timer_label)
+    core.rootScene.backgroundColor = "#AAA"
+    core.rootScene.addChild(score_bar)
+    core.rootScene.addChild(score_cover)
+    core.rootScene.addChild(btn)
+    core.rootScene.addChild(timer_label)
 
   game_start = ->
     game_term = GameTerm.progress
-    game_start_time = game.frame
+    game_start_time = core.frame
 
   game_result = ->
     game_term = GameTerm.result
@@ -455,45 +510,10 @@ $ ->
     margin = 20
     btn.moveTo(margin, MAP_HEIGHT + margin)
     btn.ontouchstart = ->
-      game.rootScene.removeChild(@)
+      core.rootScene.removeChild(@)
       game_init()
-    game.rootScene.addChild(btn)
+    core.rootScene.addChild(btn)
 
-  setup_map = ->
-    if STAGE == Stage.flat or STAGE == Stage.blocks
-      baseMap = [0...MAP_HEIGHT_N]
-      for j in baseMap
-        baseMap[j] = [0...MAP_WIDTH_N]
-        for i in baseMap[j]
-          baseMap[j][i] = 0
-          span = 30
-          col = 5
-          padding = 5
-          if (STAGE == Stage.blocks and
-              padding < j < (MAP_HEIGHT_N - padding) and
-              padding < i < (MAP_WIDTH_N - padding) and
-              (i + 15) % span < col and
-              (j + 15) % span < col)
-            baseMap[j][i] = BlockType.BLOCK
-          if j == 0 or j == MAP_HEIGHT_N - 1 or i == 0 or i == MAP_WIDTH_N - 1
-            baseMap[j][i] = BlockType.WALL
-      map.loadData(baseMap)
-    else
-      if STAGE == Stage.wall
-        filename = "/data/map_wall.json"
-      else if STAGE == Stage.vortex
-        filename = "/data/map_vortex.json"
-      else
-        filename = "/data/map_sprite.json"
-      $.getJSON filename, (data) ->
-        baseMap = data
-        for j in [0...MAP_HEIGHT_N]
-          for i in [0...MAP_WIDTH_N]
-            p = baseMap[j][i]
-            if not is_block(p) and p != BlockType.NONE
-              init_pos[p - 1] = new Victor(i, j)
-        map.loadData(baseMap)
-        console.log("map loaded")
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
@@ -506,7 +526,7 @@ $ ->
           continue
         fill_map(mx + i, my + j, team)
     if SHOW_TYPE == ShowType.matrix_fill
-      map.loadData(baseMap)
+      game.map.loadData(game.baseMap)
     # NOTE: マップに対する変更箇所全てに必要
     update_score()
 
@@ -514,10 +534,10 @@ $ ->
     if (ElzupUtils.clamp(my, MAP_HEIGHT_N - 2, 1) != my or
         ElzupUtils.clamp(mx, MAP_WIDTH_N - 2, 1) != mx)
       return
-    pre = baseMap[my][mx]
-    if pre == team + COL_SHIFT or is_block(pre)
+    pre = game.baseMap[my][mx]
+    if pre == team + COL_SHIFT or Stage.is_block(pre)
       return
-    baseMap[my][mx] = team + COL_SHIFT
+    game.baseMap[my][mx] = team + COL_SHIFT
     # スコア更新
     score[team] += 1
     if pre == 0
@@ -545,20 +565,17 @@ $ ->
 
   map_type = (spos) ->
     [mx, my] = to_mpos(spos)
-    baseMap[my][mx]
+    game.baseMap[my][mx]
 
   is_player_block_type = (type) ->
     COL_SHIFT <= type < COL_SHIFT + 4
-
-  is_block = (type) ->
-    type == BlockType.BLOCK or type == BlockType.WALL
 
   draw_circle = (x, y, r, col, force = false) ->
     if SHOW_TYPE != ShowType.graphical and !force
       return
 
   get_player = (id) ->
-    for player in player_group.childNodes
+    for player in game.players
       if player.id == id
         return player
         break
@@ -566,7 +583,7 @@ $ ->
 
   kill_player_circle = (x, y, r, team) ->
     r2 = r * r
-    for player in player_group.childNodes
+    for player in game.players
       if player.team == team or player.is_die
         continue
       dx = player.ox() - x
@@ -586,14 +603,14 @@ $ ->
         for dy in [-1...2]
           fill_map(mx + dx, my + dy, team)
     if SHOW_TYPE == ShowType.matrix_fill
-      map.loadData(baseMap)
+      game.map.loadData(game.baseMap)
     # graphical line
     update_score()
 
   kill_player_line = (x1, y1, x2, y2, team) ->
     # NOTE: 軽量化出来そうな処理
     c = 10
-    for player in player_group.childNodes
+    for player in game.players
       if player.team == team or player.is_die
         continue
       [mpx, mpy] = to_mpos(player.ox(), player.oy())
@@ -654,26 +671,30 @@ $ ->
   socket.on 'createuser', (data) ->
     console.log('create user')
     console.log(data)
+    game.addPlayer()
+
+  socket.on 'removeuser', (data) ->
+    console.log('delete user')
+    console.log(data)
+    game.removePlayer(data.id)
+
+
+class DomManager
+  @addPlayerDom: ->
     nameElem = ($ '<div/>').attr(
       user_id: data.id
       class: 'player'
       team: data.team
     )
     nameElem.append(($ '<p/>').addClass('name').html(data.id))
-    nameElem.append(($ '<p/>').addClass('hp').html("HP: 100"))
-    nameElem.append(($ '<p/>').addClass('mp').html("MP: 100"))
-
+    nameElem.append(($ '<p/>').addClass('hp'))
+    nameElem.append(($ '<p/>').addClass('mp'))
     ($ '#players-box').append(nameElem)
-    new Player(data.id, parseInt(data.team))
 
-  socket.on 'removeuser', (data) ->
-    console.log('delete user')
-    console.log(data)
-    player = get_player(data.id)
+  @updatePlayerDom: (player) ->
+    pElem = ($ ".player[user_id=#{player.id}]")
+    pElem.children('.hp').html("HP: #{player.hp}")
+    pElem.children('.mp').html("MP: #{player.mp}")
+
+  @removePlayerDom: (player) ->
     ($ ".player[user_id=#{player.id}]").remove()
-    player_group.removeChild(player)
-
-update_dom = (player) ->
-  pElem = ($ ".player[user_id=#{player.id}]")
-  pElem.children('.hp').html("HP: #{player.hp}")
-  pElem.children('.mp').html("MP: #{player.mp}")
