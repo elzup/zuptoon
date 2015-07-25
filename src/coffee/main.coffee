@@ -42,6 +42,9 @@ Controller =
 
 debug_surface = null
 
+to_xy = (rad) ->
+  new Victor(Math.cos(rad), Math.sin(rad))
+
 BlockType =
   NONE: 0
   COL_RED: 1 + COL_SHIFT
@@ -52,12 +55,6 @@ BlockType =
   BLOCK: 5
   WALL: 6
 
-Stage =
-  flat: 0
-  blocks: 1
-  wall: 2
-  vortex: 3
-  sprite: 4
 STAGE = [0, 2, 3, 4][Math.floor(Math.random() * 4)]
 
 Frame =
@@ -131,7 +128,7 @@ class Game
     @map = new Map(MAP_M, MAP_M)
     @map.image = core.assets['/images/map0.png']
     core.rootScene.addChild(@map)
-    if STAGE == Stage.flat or STAGE == Stage.blocks
+    if STAGE in [Stage.Type.flat, Stage.Type.blocks]
       @baseMap = [0...MAP_HEIGHT_N]
       for j in @baseMap
         @baseMap[j] = [0...MAP_WIDTH_N]
@@ -140,7 +137,7 @@ class Game
           span = 30
           col = 5
           padding = 5
-          if STAGE == Stage.blocks and
+          if STAGE == Stage.Type.blocks and
               padding < j < (MAP_HEIGHT_N - padding) and
               padding < i < (MAP_WIDTH_N - padding) and
               (i + 15) % span < col and
@@ -150,9 +147,9 @@ class Game
             @baseMap[j][i] = BlockType.WALL
       @map.loadData(@baseMap)
     else
-      if STAGE == Stage.wall
+      if STAGE == Stage.Type.wall
         filename = "/data/map_wall.json"
-      else if STAGE == Stage.vortex
+      else if STAGE == Stage.Type.vortex
         filename = "/data/map_vortex.json"
       else
         filename = "/data/map_sprite.json"
@@ -182,8 +179,33 @@ class Game
     @players[id].shot(rad, pow)
 
 class Stage
+  @Type:
+    flat: 0
+    blocks: 1
+    wall: 2
+    vortex: 3
+    sprite: 4
   @is_block: (type) ->
     type in [BlockType.BLOCK, BlockType.WALL]
+
+  @to_mpos = (spos, r = 0) ->
+    [Stage.to_mx(spos.x + r), Stage.to_my(spos.y + r)]
+
+  @to_mx = (sx) ->
+    ElzupUtils.clamp(Math.floor(sx / MAP_M), MAP_WIDTH_N - 1)
+
+  @to_my = (sy) ->
+    ElzupUtils.clamp(Math.floor(sy / MAP_M), MAP_HEIGHT_N - 1)
+
+  @to_spos = (mx, my) ->
+    new Victor(Stage.to_sx(mx), Stage.to_sy(my))
+
+  @to_sx = (mx) ->
+    MAP_M * mx
+
+  @to_sy = (my) ->
+    MAP_M * my
+
 
 class Player
   id: null
@@ -238,7 +260,7 @@ class Player
     shot = new Shot(pos, v, @team)
     core.rootScene.addChild(shot)
     @rotation = 180 - @rad * 180 / Math.PI
-    update_dom(this)
+    DomManager.updatePlayerDom(this)
 
   walk: (@rad, @pow) ->
     mr = @pow / 90
@@ -286,15 +308,15 @@ class Player
     for p in cposs
       tx = p.x + @v.x
       # mx, my 単体取得
-      [msx, my] = to_mpos(p)
-      mex = to_mx(tx)
+      [msx, my] = Stage.to_mpos(p)
+      mex = Stage.to_mx(tx)
       vxt = Math.abs vx
       msx += 1
       if @v.x < 0
         msx -= 2
       for mx in [msx..mex]
         if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
-          tsx = to_sx(mx)
+          tsx = Stage.to_sx(mx)
           k.x = 0
           if @v.x >= 0
             vxt = tsx - p.x
@@ -311,15 +333,15 @@ class Player
     for p in cposs
       ty = p.y + @v.y
       p.x += dx
-      [tmp, msy] = to_mpos(p)
-      mey = to_my(ty)
+      [tmp, msy] = Stage.to_mpos(p)
+      mey = Stage.to_my(ty)
       vyt = Math.abs vy
       msy += 1
       if @v.y < 0
         msy -= 2
       for my in [msy..mey]
         if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
-          tsy = to_sy(my)
+          tsy = Stage.to_sy(my)
           k.y = 0
           if @v.y >= 0
             vyt = tsy - p.y
@@ -336,14 +358,14 @@ class Player
     @v = k
 
   get_mps: ->
-    [@msx, @msy] = to_mpos(@pos)
-    [@mex, @mey] = to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
+    [@msx, @msy] = Stage.to_mpos(@pos)
+    [@mex, @mey] = Stage.to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
     for my in [@msy..@mey]
       for mx in [@msx..@mex]
         if game.baseMap[my][mx] == BlockType.MP
           game.baseMap[my][mx] = BlockType.NONE
           @mp += 3
-    update_dom(this)
+    DomManager.updatePlayerDom(this)
     game.map.loadData(game.baseMap)
 
 
@@ -430,7 +452,7 @@ $ ->
 
       # MP の分布変更
       if @S.age % 10 == 0
-        [mx, my] = to_mpos(@opos())
+        [mx, my] = Stage.to_mpos(@opos())
         console.log "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
         if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
           game.baseMap[my][mx] = BlockType.MP
@@ -481,7 +503,7 @@ $ ->
     # player は手前
 
     for i, p of init_pos
-      init_pos[i] = to_mpos(p)
+      init_pos[i] = Stage.to_mpos(p)
 
     timer_label = new Label()
     timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
@@ -542,7 +564,7 @@ $ ->
 
   fill_pos_circle = (x, y, r, team) ->
     draw_circle(x, y, r, COL_LIB[team])
-    [mx, my] = to_mpos(new Victor(x, y))
+    [mx, my] = Stage.to_mpos(new Victor(x, y))
     mr = Math.floor(r / MAP_M)
     mr2 = mr * mr
     for j in [-mr..mr]
@@ -569,27 +591,9 @@ $ ->
       return
     score[pre - 1] -= 1
 
-  to_mpos = (spos, r = 0) ->
-    [to_mx(spos.x + r), to_my(spos.y + r)]
-
-  to_mx = (sx) ->
-    ElzupUtils.clamp(Math.floor(sx / MAP_M), MAP_WIDTH_N - 1)
-
-  to_my = (sy) ->
-    ElzupUtils.clamp(Math.floor(sy / MAP_M), MAP_HEIGHT_N - 1)
-
-  to_spos = (mx, my) ->
-    new Victor(to_sx(mx), to_sy(my))
-
-  to_sx = (mx) ->
-    MAP_M * mx
-
-  to_sy = (my) ->
-    MAP_M * my
-
 
   map_type = (spos) ->
-    [mx, my] = to_mpos(spos)
+    [mx, my] = Stage.to_mpos(spos)
     game.baseMap[my][mx]
 
   is_player_block_type = (type) ->
@@ -616,7 +620,7 @@ $ ->
     for i in [0...c]
       px = x2 + (i / c) * (x1 - x2)
       py = y2 + (i / c) * (y1 - y2)
-      [mx, my] = to_mpos(px, py)
+      [mx, my] = Stage.to_mpos(px, py)
       for dx in [-1...2]
         for dy in [-1...2]
           fill_map(mx + dx, my + dy, team)
@@ -631,11 +635,11 @@ $ ->
     for player in game.players
       if player.team == team or player.is_die
         continue
-      [mpx, mpy] = to_mpos(player.ox(), player.oy())
+      [mpx, mpy] = Stage.to_mpos(player.ox(), player.oy())
       for i in [0...c]
         px = x2 + (i / c) * (x1 - x2)
         py = y2 + (i / c) * (y1 - y2)
-        [mx, my] = to_mpos(px, py)
+        [mx, my] = Stage.to_mpos(px, py)
         if (-1 <= mx - mpx <= 1 && -1 <= my - mpy <= 1)
           fill_pos_circle(player.ox(), player.oy(), PLAYER_DIE_RADIUS, team)
           player.die()
@@ -654,9 +658,6 @@ $ ->
       context.fillRect(0, h, score[i] * MAP_WIDTH / max, FOOTER_HEIGHT / 4)
     context.closePath()
     context.fill()
-
-  to_xy = (rad) ->
-    new Victor(Math.cos(rad), Math.sin(rad))
 
   socket.emit 'new',
     room: 'top'
