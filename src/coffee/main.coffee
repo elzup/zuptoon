@@ -395,7 +395,9 @@ class Player
     @v.length() != 0
 
   die: ->
-    @opacity = 0.5
+    print('die')
+    @S.opacity = 0.5
+    @v = zerovic()
     @is_die = true
     # @S.frame = Frame.None
     # @diemove()
@@ -406,9 +408,9 @@ class Player
                       init_pos[@team].y * MAP_M,
                       FPS / 2)
     .delay(FPS).and().repeat(->
-      @opacity = @S.age % 2
+      @S.opacity = @S.age % 2
     , FPS).then(->
-      @opacity = 1.0
+      @S.opacity = 1.0
       @is_die = false
     )
 
@@ -453,14 +455,13 @@ class Shot
     # MP の分布変更
     if @S.age % 10 == 0
       [mx, my] = Stage.to_mpos(@opos())
-      print "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
       if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
         game.baseMap[my][mx] = BlockType.MP
         game.map.loadData(game.baseMap)
         @mp -= 1
 
     # プレイヤー衝突判定
-    for id, player of @players
+    for id, player of game.players
       if player.team == @team || player.is_die
         continue
       dx = player.ox() - @ox()
