@@ -218,6 +218,10 @@ class Stage
   @to_sy = (my) ->
     MAP_M * my
 
+  @map_type = (spos) ->
+    [mx, my] = Stage.to_mpos(spos)
+    game.baseMap[my][mx]
+
 
 class Player
   id: null
@@ -268,7 +272,6 @@ class Player
       return
     # TODO: mp 消費量バランス
     @mp -= 5
-    print "shot"
     # mr = @pow / 90 * 10
     mr = 10
     v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
@@ -276,7 +279,6 @@ class Player
 
     pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
     shot = new Shot(pos, v, @team)
-    core.rootScene.addChild(shot)
     @S.rotation = 180 - @rad * 180 / Math.PI
     DomManager.updatePlayerDom(this)
 
@@ -419,6 +421,66 @@ class Player
   opos: ->
     new Victor(@ox(), @oy())
 
+class Shot
+  pos: zerovic()
+  v: zerovic()
+  a: new Victor(1.0, 1.0)
+  mp: 5
+  width: 16
+  height: 16
+
+  constructor: (@pos, @v, @team) ->
+    @S = new Sprite(32, 32)
+    @S.image = core.assets['/images/item.png']
+    @S.frame = Frame.ItemShot
+    @S.moveTo(@pos.x, @pos.y)
+    @S.tl.scaleTo(0.5, 0.5)
+    rad = Math.atan2(@v.x, @v.y)
+    @S.rotation = 180 - rad * 180 / Math.PI
+    @S.addEventListener Event.ENTER_FRAME, =>
+      @onenterframe()
+    core.rootScene.addChild(@S)
+
+  onenterframe: ->
+    @pos.add(@v)
+    @S.moveTo(@pos.x, @pos.y)
+    # @v.multiply(@a)
+
+    # ブロック衝突判定
+    if Stage.map_type(@opos()) in [BlockType.BLOCK, BlockType.WALL]
+      core.rootScene.removeChild(@S)
+
+    # MP の分布変更
+    if @S.age % 10 == 0
+      [mx, my] = Stage.to_mpos(@opos())
+      print "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
+      if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
+        game.baseMap[my][mx] = BlockType.MP
+        game.map.loadData(game.baseMap)
+        @mp -= 1
+
+    # プレイヤー衝突判定
+    for id, player of @players
+      if player.team == @team || player.is_die
+        continue
+      dx = player.ox() - @ox()
+      dy = player.oy() - @oy()
+      if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
+        player.v.add(@v.multiply(new Victor(3.0, 3.0)))
+        core.rootScene.removeChild(@S)
+        player.damage()
+        return
+
+  r: ->
+    @width / 2
+  ox: ->
+    @pos.x + @width / 2
+  oy: ->
+    @pos.y + @height / 2
+  opos: ->
+    new Victor(@ox(), @oy())
+
+
 $ ->
   # enchant game
   enchant()
@@ -444,63 +506,6 @@ $ ->
 
   # socket io
   socket = io.connect()
-
-  Shot = enchant.Class.create enchant.Sprite,
-    pos: zerovic()
-    v: zerovic()
-    a: new Victor(1.0, 1.0)
-    mp: 5
-    width: 16
-    height: 16
-
-    initialize: (@pos, @v, @team) ->
-      enchant.Sprite.call(this, 32, 32)
-      # TODO: group
-      @image = core.assets['/images/item.png']
-      @frame = Frame.ItemShot
-      @moveTo(@pos.x, @pos.y)
-      @S.tl.scaleTo(0.5, 0.5)
-      rad = Math.atan2(@v.x, @v.y)
-      @S.rotation = 180 - rad * 180 / Math.PI
-
-    onenterframe: ->
-      @pos.add(@v)
-      @moveTo(@pos.x, @pos.y)
-      # @v.multiply(@a)
-
-      # ブロック衝突判定
-      if map_type(@opos()) in [BlockType.BLOCK, BlockType.WALL]
-        core.rootScene.removeChild(this)
-
-      # MP の分布変更
-      if @S.age % 10 == 0
-        [mx, my] = Stage.to_mpos(@opos())
-        p "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
-        if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
-          game.baseMap[my][mx] = BlockType.MP
-          game.map.loadData(baseMap)
-          @mp -= 1
-
-      # プレイヤー衝突判定
-      for id, player of @players
-        if player.team == @team || player.is_die
-          continue
-        dx = player.ox() - @ox()
-        dy = player.oy() - @oy()
-        if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
-          player.v.add(@v.multiply(new Victor(3.0, 3.0)))
-          core.rootScene.removeChild(this)
-          player.damage()
-          return
-
-    r: ->
-      @width / 2
-    ox: ->
-      @pos.x + @width / 2
-    oy: ->
-      @pos.y + @height / 2
-    opos: ->
-      new Victor(@ox(), @oy())
 
   core.onload = ->
     game = new Game
@@ -610,10 +615,6 @@ $ ->
       return
     score[pre - 1] -= 1
 
-
-  map_type = (spos) ->
-    [mx, my] = Stage.to_mpos(spos)
-    game.baseMap[my][mx]
 
   is_player_block_type = (type) ->
     COL_SHIFT <= type < COL_SHIFT + 4
