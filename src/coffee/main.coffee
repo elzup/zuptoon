@@ -37,7 +37,14 @@ clone = (v) ->
   new Victor(0, 0).copy(v)
 
 print = (params...) ->
-  console.log params
+  if params.length == 1
+    console.log params[0]
+  else if params.length == 2
+    console.log params[0], params[1]
+  else if params.length == 3
+    console.log params[0], params[1], params[2]
+  else
+    console.log params
 
 Controller =
   left: 0
@@ -225,10 +232,11 @@ class Player
   hp: 100
   pointer: null
   pre_shot_age: 0
+  width: 32
+  height: 32
 
   constructor: (@id, @team) ->
     @S = new Sprite(32, 32)
-    print init_pos
     @pos = clone(init_pos[@team]).multiply(MAP_M_VEC)
     @pos.subtract(new Victor(@r(), @r()))
     @S.moveTo(@pos.x, @pos.y)
@@ -337,7 +345,7 @@ class Player
     for p in cposs
       ty = p.y + @v.y
       p.x += dx
-      [tmp, msy] = Stage.to_mpos(p)
+      [mx, msy] = Stage.to_mpos(p)
       mey = Stage.to_my(ty)
       vyt = Math.abs vy
       msy += 1
@@ -434,6 +442,8 @@ $ ->
     v: zerovic()
     a: new Victor(1.0, 1.0)
     mp: 5
+    width: 16
+    height: 16
 
     initialize: (@pos, @v, @team) ->
       enchant.Sprite.call(this, 32, 32)
@@ -505,9 +515,6 @@ $ ->
     core.rootScene.remove()
     game_term = GameTerm.ready
     # player は手前
-
-    for i, p of init_pos
-      init_pos[i] = Stage.to_mpos(p)
 
     timer_label = new Label()
     timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
