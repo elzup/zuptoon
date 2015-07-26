@@ -36,6 +36,9 @@ zerovic = ->
 clone = (v) ->
   new Victor(0, 0).copy(v)
 
+print = (params...) ->
+  console.log params
+
 Controller =
   left: 0
   right: 1
@@ -161,7 +164,7 @@ class Game
             if not Stage.is_block(p) and p != BlockType.NONE
               init_pos[p - 1] = new Victor(i, j)
         @map.loadData(@baseMap)
-        console.log("map loaded")
+        print "map loaded"
 
   walk_player: (id, rad, pow) ->
     if !@players[id]?
@@ -225,6 +228,7 @@ class Player
 
   constructor: (@id, @team) ->
     @S = new Sprite(32, 32)
+    print init_pos
     @pos = clone(init_pos[@team]).multiply(MAP_M_VEC)
     @pos.subtract(new Victor(@r(), @r()))
     @S.moveTo(@pos.x, @pos.y)
@@ -250,7 +254,7 @@ class Player
       return
     # TODO: mp 消費量バランス
     @mp -= 5
-    console.log "shot"
+    print "shot"
     # mr = @pow / 90 * 10
     mr = 10
     v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
@@ -453,7 +457,7 @@ $ ->
       # MP の分布変更
       if @S.age % 10 == 0
         [mx, my] = Stage.to_mpos(@opos())
-        console.log "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
+        p "k", game.baseMap[my][mx], [BlockType.BLOCK, BlockType.WALL]
         if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
           game.baseMap[my][mx] = BlockType.MP
           game.map.loadData(baseMap)
@@ -662,7 +666,7 @@ $ ->
   socket.emit 'new',
     room: 'top'
   # TODO: remove debug outputs
-  console.log('socket connect try')
+  print 'socket connect try'
 
   socket.on 'move', (data) ->
     if data.pow == 0
