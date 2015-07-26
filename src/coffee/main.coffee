@@ -127,12 +127,14 @@ class Game
   addPlayer: (id, team) ->
     player = new Player(id, team)
     @players[id] = player
+    console.log 'add:', @players
 
   removePlayer: (id) ->
     if !@players[id]?
       return
-    core.rootScene.removeChild(@players[id])
+    @players[id].close()
     delete @players[id]
+    console.log 'remove:', @players
 
   setup_map: ->
     @map = new Map(MAP_M, MAP_M)
@@ -248,6 +250,10 @@ class Player
     DomManager.updatePlayerDom(this)
     core.rootScene.addChild(@S)
 
+  close: ->
+    DomManager.removePlayerDom(this)
+    core.rootScene.removeChild(@S)
+
   damage: ->
     @hp -= 20
     if @hp <= 0
@@ -271,18 +277,20 @@ class Player
     pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
     shot = new Shot(pos, v, @team)
     core.rootScene.addChild(shot)
-    @rotation = 180 - @rad * 180 / Math.PI
+    @S.rotation = 180 - @rad * 180 / Math.PI
     DomManager.updatePlayerDom(this)
 
   walk: (@rad, @pow) ->
     mr = @pow / 90
     @v.add new Victor(0, 2).rotate(-@rad).multiply(new Victor(mr, mr))
     if @shotable()
-      @rotation = 180 - @rad * 180 / Math.PI
+      @S.rotation = 180 - @rad * 180 / Math.PI
 
   dash: ->
-    rad = Math.atan2(@v.x, @v.y)
-    @walk(rad, 1000)
+    @walk(@dire_rad(), 1000)
+
+  dire_rad: ->
+    (1 - @S.rotation / 180) * Math.PI
 
   onenterframe: ->
     if @moved()
@@ -453,7 +461,7 @@ $ ->
       @moveTo(@pos.x, @pos.y)
       @S.tl.scaleTo(0.5, 0.5)
       rad = Math.atan2(@v.x, @v.y)
-      @rotation = 180 - rad * 180 / Math.PI
+      @S.rotation = 180 - rad * 180 / Math.PI
 
     onenterframe: ->
       @pos.add(@v)
@@ -694,6 +702,7 @@ $ ->
     game.addPlayer(data.id, data.team)
 
   socket.on 'removeuser', (data) ->
+    console.log 'remove', data
     game.removePlayer(data.id)
 
 class DomManager
