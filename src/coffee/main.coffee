@@ -518,11 +518,21 @@ $ ->
     core.rootScene.addChild(sp)
     game_init()
 
+  oldTime = new Date
+  fpss = []
   core.onenterframe = ->
     if game is null
       return
     game.onenterframe()
-
+    newTime = new Date
+    fps = 1000 / (newTime.getTime() - oldTime.getTime())
+    oldTime = newTime
+    fpss.push(fps)
+    if fpss.length == 100
+      # sum
+      fps_avg = fpss.reduce (x, y) -> x + y
+      print "fps:", (fps_avg / 100).toFixed(2)
+      fpss = []
   core.start()
 
   game_init = ->
