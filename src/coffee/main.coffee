@@ -46,6 +46,8 @@ print = (params...) ->
   else
     console.log params
 
+get_params = ElzupUtils.get_parameters()
+
 Controller =
   left: 0
   right: 1
@@ -54,28 +56,6 @@ debug_surface = null
 
 to_xy = (rad) ->
   new Victor(Math.cos(rad), Math.sin(rad))
-
-BlockType =
-  NONE: 0
-  COL_RED: 1 + COL_SHIFT
-  COL_YELLOW: 2 + COL_SHIFT
-  COL_BLUE: 3 + COL_SHIFT
-  COL_GREEN: 4 + COL_SHIFT
-  MP: 9
-  BLOCK: 5
-  WALL: 6
-
-STAGE = [0, 2, 3, 4][Math.floor(Math.random() * 4)]
-
-Frame =
-  None: -1
-  pointer: 1
-  Stand: 0
-  Walk: 1
-  Attack: 2
-  Damage: 3
-  Super: 4
-  ItemShot: 2
 
 # GAME_TIME_LIMIT_SEC = 90
 GAME_TIME_LIMIT_SEC = 90
@@ -154,9 +134,9 @@ class Game
               padding < i < (MAP_WIDTH_N - padding) and
               (i + 15) % span < col and
               (j + 15) % span < col
-            @baseMap[j][i] = BlockType.BLOCK
+            @baseMap[j][i] = Stage.BlockType.BLOCK
           if j == 0 or j == MAP_HEIGHT_N - 1 or i == 0 or i == MAP_WIDTH_N - 1
-            @baseMap[j][i] = BlockType.WALL
+            @baseMap[j][i] = Stage.BlockType.WALL
       @map.loadData(@baseMap)
     else
       if STAGE == Stage.Type.wall
@@ -170,7 +150,7 @@ class Game
         for j in [0...MAP_HEIGHT_N]
           for i in [0...MAP_WIDTH_N]
             p = @baseMap[j][i]
-            if not Stage.is_block(p) and p != BlockType.NONE
+            if not Stage.is_block(p) and p != Stage.BlockType.NONE
               init_pos[p - 1] = new Victor(i, j)
         @map.loadData(@baseMap)
         print "map loaded"
@@ -197,8 +177,15 @@ class Stage
     wall: 2
     vortex: 3
     sprite: 4
+
+  @BlockType:
+    NONE: 0
+    MP: 9
+    BLOCK: 5
+    WALL: 6
+
   @is_block: (type) ->
-    type in [BlockType.BLOCK, BlockType.WALL]
+    type in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
 
   @to_mpos = (spos, r = 0) ->
     [Stage.to_mx(spos.x + r), Stage.to_my(spos.y + r)]
@@ -240,6 +227,14 @@ class Player
   pre_shot_age: 0
   width: 32
   height: 32
+
+  Frame:
+    None: -1
+    Stand: 0
+    Walk: 1
+    Attack: 2
+    Damage: 3
+    Super: 4
 
   constructor: (@id, @team) ->
     @S = new Sprite(32, 32)
@@ -296,10 +291,10 @@ class Player
 
   onenterframe: ->
     if @moved()
-      f = [Frame.Walk, Frame.Stand][ElzupUtils.period(@S.age, 8, 2)]
+      f = [Player.Frame.Walk, Player.Frame.Stand][ElzupUtils.period(@S.age, 8, 2)]
       @S.frame = @team * 5 + f
     else
-      @S.frame = @team * 5 + Frame.Stand
+      @S.frame = @team * 5 + Player.Frame.Stand
     @pre_pos.copy(@pos)
 
     if @is_die
@@ -337,7 +332,7 @@ class Player
       if @v.x < 0
         msx -= 2
       for mx in [msx..mex]
-        if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+        if game.baseMap[my][mx] in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
           tsx = Stage.to_sx(mx)
           k.x = 0
           if @v.x >= 0
@@ -362,7 +357,7 @@ class Player
       if @v.y < 0
         msy -= 2
       for my in [msy..mey]
-        if game.baseMap[my][mx] in [BlockType.BLOCK, BlockType.WALL]
+        if game.baseMap[my][mx] in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
           tsy = Stage.to_sy(my)
           k.y = 0
           if @v.y >= 0
@@ -384,8 +379,8 @@ class Player
     [@mex, @mey] = Stage.to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
     for my in [@msy..@mey]
       for mx in [@msx..@mex]
-        if game.baseMap[my][mx] == BlockType.MP
-          game.baseMap[my][mx] = BlockType.NONE
+        if game.baseMap[my][mx] == Stage.BlockType.MP
+          game.baseMap[my][mx] = Stage.BlockType.NONE
           @mp += 3
     DomManager.updatePlayerDom(this)
     game.map.loadData(game.baseMap)
@@ -431,10 +426,14 @@ class Shot
   width: 16
   height: 16
 
+  @Frame:
+    None: -1
+    ItemShot: 2
+
   constructor: (@pos, @v, @team) ->
     @S = new Sprite(32, 32)
     @S.image = core.assets['/images/item.png']
-    @S.frame = Frame.ItemShot
+    @S.frame = Shot.Frame.ItemShot
     @S.moveTo(@pos.x, @pos.y)
     @S.tl.scaleTo(0.5, 0.5)
     rad = Math.atan2(@v.x, @v.y)
@@ -449,14 +448,14 @@ class Shot
     # @v.multiply(@a)
 
     # ブロック衝突判定
-    if Stage.map_type(@opos()) in [BlockType.BLOCK, BlockType.WALL]
+    if Stage.map_type(@opos()) in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
       core.rootScene.removeChild(@S)
 
     # MP の分布変更
     if @S.age % 10 == 0
       [mx, my] = Stage.to_mpos(@opos())
-      if game.baseMap[my][mx] not in [BlockType.WALL, BlockType.WALL]
-        game.baseMap[my][mx] = BlockType.MP
+      if game.baseMap[my][mx] not in [Stage.BlockType.WALL, Stage.BlockType.WALL]
+        game.baseMap[my][mx] = Stage.BlockType.MP
         game.map.loadData(game.baseMap)
         @mp -= 1
 
@@ -480,6 +479,13 @@ class Shot
     @pos.y + @height / 2
   opos: ->
     new Victor(@ox(), @oy())
+
+# 指定があればステージタイプを決める
+if get_params['type'] ?
+  STAGE = get_params['type']
+else
+  STAGE = Stage.Type.blocks
+# [0, 2, 3, 4][Math.floor(Math.random() * 4)]
 
 
 $ ->
