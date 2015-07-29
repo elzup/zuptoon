@@ -1,29 +1,12 @@
 # constants
-FPS = 20
+fps = 20
 
-SPR_Z_SHIFT = 1000
-PLAYER_Z_SHIFT = 10000
-spr_count = 0
-SHOT_RAPID_DELAY = FPS * 0.2
-SUPERSHOT_RAPID_DELAY = FPS * 1.0
-COL_LIB = ['red', 'yellow', 'blue', 'green']
-COL_SHIFT = 1
-# カフェラッテ
-# COL_SHIFT = 33 #
-# COL_LIB = ['#B58238', '#BE9562', '#8A4E1E', '#5B3417']
-
-QUICK_DEBUG = 0
-
-MAP_M = 8
-MAP_WIDTH_N = 64 * 2
-MAP_HEIGHT_N = 48 * 2
-MAP_WIDTH = MAP_WIDTH_N * MAP_M
-MAP_HEIGHT = MAP_HEIGHT_N * MAP_M
-MAP_M_VEC = new Victor(MAP_M, MAP_M)
-
-PLAYER_DIE_RADIUS = 100
-GAME_FONT = '50px "ヒラギノ角ゴ ProN W3",
- "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif'
+mapM = 8
+mapWidthN = 64 * 2
+mapHeightN = 48 * 2
+mapWidth = mapWidthN * mapM
+mapHeight = mapHeightN * mapM
+mapMVec = new Victor(mapM, mapM)
 
 # global variables
 
@@ -48,59 +31,26 @@ print = (params...) ->
 
 # alias
 eu = ElzupUtils
-get_params = eu.get_parameters()
+getParams = eu.get_parameters()
 
-Controller =
-  left: 0
-  right: 1
+debugSurface = null
 
-debug_surface = null
-
-to_xy = (rad) ->
+toXY = (rad) ->
   new Victor(Math.cos(rad), Math.sin(rad))
 
-# GAME_TIME_LIMIT_SEC = 90
-GAME_TIME_LIMIT_SEC = 90
-GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
-FOOTER_HEIGHT = 80
+gameTimeLimitSec = 90
+gameTimePreFinish = parseInt(gameTimeLimitSec / 6)
+footerHeight = 80
 
-init_pos = [
-  new Victor(MAP_WIDTH_N / 7, MAP_HEIGHT_N / 10)
-  new Victor(MAP_WIDTH_N * 6 / 7, MAP_HEIGHT_N / 10)
-  new Victor(MAP_WIDTH_N / 7, MAP_HEIGHT_N * 6 / 10)
-  new Victor(MAP_WIDTH_N * 6 / 7, MAP_HEIGHT_N * 9 / 10)
-]
-
-V_SHOT = 40.0
-V_SUPER_SHOT = 200.0
-V_ROLLER = 20.0
-
-SWIM_TIME = FPS * 2
-PLAYER_SPEED = 1.5
-GameTerm =
+term =
   ready: 0
   progress: 1
   result: 2
 
-PlayerType =
-  gun: 0
-  rifle: 1
-  roller: 2
-  shotgun: 4
-
-# map view type
-# 0: graphical
-# 1: matrix_fill
-ShowType =
-  graphical: 0
-  matrix_fill: 1
-
-SHOW_TYPE = ShowType.matrix_fill
-
 class Game
   constructor: ->
     @players = {}
-    @setup_map()
+    @setupMap()
 
   onenterframe: ->
     for id, player of @players
@@ -118,142 +68,154 @@ class Game
     delete @players[id]
     console.log 'remove:', @players
 
-  setup_map: ->
-    @map = new Map(MAP_M, MAP_M)
+  setupMap: ->
+    @map = new Map(mapM, mapM)
     @map.image = core.assets['/images/map0.png']
     core.rootScene.addChild(@map)
-    if STAGE in [Stage.Type.flat, Stage.Type.blocks]
-      @baseMap = [0...MAP_HEIGHT_N]
+    if stageType in [Stage.type.flat, Stage.type.blocks]
+      @baseMap = [0...mapHeightN]
       for j in @baseMap
-        @baseMap[j] = [0...MAP_WIDTH_N]
+        @baseMap[j] = [0...mapWidthN]
         for i in @baseMap[j]
           @baseMap[j][i] = 0
           span = 30
           col = 5
           padding = 5
-          if STAGE == Stage.Type.blocks and
-              padding < j < (MAP_HEIGHT_N - padding) and
-              padding < i < (MAP_WIDTH_N - padding) and
+          if stageType == Stage.type.blocks and
+              padding < j < (mapHeightN - padding) and
+              padding < i < (mapWidthN - padding) and
               (i + 15) % span < col and
               (j + 15) % span < col
-            @baseMap[j][i] = Stage.BlockType.BLOCK
-          if j == 0 or j == MAP_HEIGHT_N - 1 or i == 0 or i == MAP_WIDTH_N - 1
-            @baseMap[j][i] = Stage.BlockType.WALL
+            @baseMap[j][i] = Stage.blockType.BLOCK
+          if j == 0 or j == mapHeightN - 1 or i == 0 or i == mapWidthN - 1
+            @baseMap[j][i] = Stage.blockType.WALL
       @map.loadData(@baseMap)
     else
-      if STAGE == Stage.Type.wall
+      if stageType == Stage.type.wall
         filename = "/data/map_wall.json"
-      else if STAGE == Stage.Type.vortex
+      else if stageType == Stage.type.vortex
         filename = "/data/map_vortex.json"
       else
         filename = "/data/map_sprite.json"
       $.getJSON filename, (data) =>
         @baseMap = data
-        for j in [0...MAP_HEIGHT_N]
-          for i in [0...MAP_WIDTH_N]
+        for j in [0...mapHeightN]
+          for i in [0...mapWidthN]
             p = @baseMap[j][i]
-            if not Stage.is_block(p) and p != Stage.BlockType.NONE
-              init_pos[p - 1] = new Victor(i, j)
+            if not Stage.isBlock(p) and p != Stage.blockType.NONE
+              Stage.initPos[p - 1] = new Victor(i, j)
         @map.loadData(@baseMap)
         print "map loaded"
 
-  walk_player: (id, rad, pow) ->
+  walkPlayer: (id, rad, pow) ->
     if !@players[id]?
       return
     @players[id].walk(rad, pow)
 
-  dash_player: (id) ->
+  dashPlayer: (id) ->
     if !@players[id]?
       return
     @players[id].dash()
 
-  shot_player: (id, rad, pow) ->
+  shotPlayer: (id, rad, pow) ->
     if !@players[id]?
       return
     @players[id].shot(rad, pow)
 
 class Stage
-  @Type:
+  @type:
     flat: 0
     blocks: 1
     wall: 2
     vortex: 3
     sprite: 4
 
-  @BlockType:
+  @blockType:
     NONE: 0
     MP: 9
     BLOCK: 5
     WALL: 6
 
-  @is_block: (type) ->
-    type in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
+  @initPos = [
+    new Victor(mapWidthN / 7, mapHeightN / 10)
+    new Victor(mapWidthN * 6 / 7, mapHeightN / 10)
+    new Victor(mapWidthN / 7, mapHeightN * 6 / 10)
+    new Victor(mapWidthN * 6 / 7, mapHeightN * 9 / 10)
+  ]
 
-  @to_mpos = (spos, r = 0) ->
-    [Stage.to_mx(spos.x + r), Stage.to_my(spos.y + r)]
 
-  @to_mx = (sx) ->
-    eu.clamp(Math.floor(sx / MAP_M), MAP_WIDTH_N - 1)
+  @isBlock: (type) ->
+    type in [Stage.blockType.BLOCK, Stage.blockType.WALL]
 
-  @to_my = (sy) ->
-    eu.clamp(Math.floor(sy / MAP_M), MAP_HEIGHT_N - 1)
+  @toMpos = (spos, r = 0) ->
+    [Stage.toMx(spos.x + r), Stage.toMy(spos.y + r)]
 
-  @to_spos = (mx, my) ->
-    new Victor(Stage.to_sx(mx), Stage.to_sy(my))
+  @toMx = (sx) ->
+    eu.clamp(Math.floor(sx / mapM), mapWidthN - 1)
 
-  @to_sx = (mx) ->
-    MAP_M * mx
+  @toMy = (sy) ->
+    eu.clamp(Math.floor(sy / mapM), mapHeightN - 1)
 
-  @to_sy = (my) ->
-    MAP_M * my
+  @toSpos = (mx, my) ->
+    new Victor(Stage.toSx(mx), Stage.toSy(my))
 
-  @map_type = (spos) ->
-    [mx, my] = Stage.to_mpos(spos)
+  @toSx = (mx) ->
+    mapM * mx
+
+  @toSy = (my) ->
+    mapM * my
+
+  @mapType = (spos) ->
+    [mx, my] = Stage.toMpos(spos)
     game.baseMap[my][mx]
 
 
 class Player
   id: null
-  sp: PLAYER_SPEED
   pos: zerovic()
   v: zerovic()
   a: new Victor(0.8, 0.8)
-  pre_pos: zerovic()
+  prePos: zerovic()
   team: 0
   col: null
-  last_shot_frame: 0
-  is_die: false
+  isDie: false
   mp: 100
   hp: 100
   pointer: null
-  pre_shot_age: 0
+  preShotAge: 0
   width: 32
   height: 32
+  @color = ['red', 'yellow', 'blue', 'green']
 
-  @Frame:
-    None: -1
-    Stand: 0
-    Walk: 1
-    Attack: 2
-    Damage: 3
-    Super: 4
+  # ショット後のデュレイ
+  @shotRapidDelay = fps * 0.2
+  # 重なり順序優先度
+  @zShift = 10000
+
+  @frame:
+    none: -1
+    stand: 0
+    walk: 1
+    attack: 2
+    damage: 3
+    super: 4
 
   constructor: (@id, @team) ->
-    @S = new Sprite(32, 32)
-    @pos = clone(init_pos[@team]).multiply(MAP_M_VEC)
+    @s = new Sprite(32, 32)
+    @pos = clone(Stage.initPos[@team]).multiply(mapMVec)
     @pos.subtract(new Victor(@r(), @r()))
-    @S.moveTo(@pos.x, @pos.y)
-    @S.image = core.assets['/images/player.png']
-    @S.frame = @team * 5
-    @col = COL_LIB[@team]
-    @S._style.zIndex = -PLAYER_Z_SHIFT
+    @s.moveTo(@pos.x, @pos.y)
+    @s.image = core.assets['/images/player.png']
+    @s.frame = @team * 5
+    @col = Player.color[@team]
+    @s._style.zIndex = -@zShift
     DomManager.addPlayerDom(this)
     DomManager.updatePlayerDom(this)
-    core.rootScene.addChild(@S)
+    core.rootScene.addChild(@s)
 
   close: ->
     DomManager.removePlayerDom(this)
-    core.rootScene.removeChild(@S)
+    core.rootScene.removeChild(@s)
 
   damage: ->
     @hp -= 20
@@ -261,61 +223,61 @@ class Player
       @die()
     DomManager.updatePlayerDom(this)
 
-  shotable: ->
-    @pre_shot_age + SHOT_RAPID_DELAY < @S.age
+  isShotable: ->
+    @preShotAge + Player.shotRapidDelay < @s.age
 
   shot: (@rad, @pow)->
-    if @mp < 5 or @is_die or not @shotable()
+    if @mp < 5 or @isDie or not @isShotable()
       return
     # TODO: mp 消費量バランス
     @mp -= 5
     # mr = @pow / 90 * 10
     mr = 10
     v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
-    @pre_shot_age = @S.age
+    @preShotAge = @s.age
 
     pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
-    shot = new Shot(pos, v, @team)
-    @S.rotation = 180 - @rad * 180 / Math.PI
+    # un save instance
+    new Shot(pos, v, @team)
+    @s.rotation = 180 - @rad * 180 / Math.PI
     DomManager.updatePlayerDom(this)
 
   walk: (@rad, @pow) ->
     mr = @pow / 90
     @v.add new Victor(0, 2).rotate(-@rad).multiply(new Victor(mr, mr))
-    if @shotable()
-      @S.rotation = 180 - @rad * 180 / Math.PI
+    if @isShotable()
+      @s.rotation = 180 - @rad * 180 / Math.PI
 
   dash: ->
-    @walk(@dire_rad_v(), 1000)
+    @walk(@direRadV(), 1000)
 
-  dire_rad: ->
-    (1 - @S.rotation / 180) * Math.PI
+  direRad: ->
+    (1 - @s.rotation / 180) * Math.PI
 
-  dire_rad_v: ->
-    rad = Math.atan2(@v.x, @v.y)
+  direRadV: ->
+    Math.atan2(@v.x, @v.y)
 
   onenterframe: ->
     if @moved()
-      f = [Player.Frame.Walk, Player.Frame.Stand][eu.period(@S.age, 8, 2)]
-      @S.frame = @team * 5 + f
+      f = [Player.frame.walk, Player.frame.stand][eu.period(@s.age, 8, 2)]
+      @s.frame = @team * 5 + f
     else
-      @S.frame = @team * 5 + Player.Frame.Stand
-    @pre_pos.copy(@pos)
+      @s.frame = @team * 5 + Player.frame.stand
+    @prePos.copy(@pos)
 
-    if @is_die
+    if @isDie
       return
     if @v.length() == 0
       return
 
-    @check_conf_pos()
-    @get_mps()
-    # @pos.add(new Victor(vx, vy))
+    @safeMove()
+    @recoverMapMP()
     @v.multiply(@a)
     if @v.length() < 0.5
       @v = zerovic()
-    @S.moveTo(@pos.x, @pos.y)
+    @s.moveTo(@pos.x, @pos.y)
 
-  check_conf_pos: ->
+  safeMove: ->
     vx = @v.x
     vy = @v.y
     k = clone(@v)
@@ -325,25 +287,25 @@ class Player
     cposs = []
     for deg in [0...360] by 30
       rad = deg * Math.PI * 2 / 360
-      cposs.push(to_xy(rad).multiply(new Victor(@r(), @r())).add(@opos()))
+      cposs.push(toXY(rad).multiply(new Victor(@r(), @r())).add(@oPos()))
 
     for p in cposs
       tx = p.x + @v.x
       # mx, my 単体取得
-      [msx, my] = Stage.to_mpos(p)
-      mex = Stage.to_mx(tx)
+      [msx, my] = Stage.toMpos(p)
+      mex = Stage.toMx(tx)
       vxt = Math.abs vx
       msx += 1
       if @v.x < 0
         msx -= 2
       for mx in [msx..mex]
-        if game.baseMap[my][mx] in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
-          tsx = Stage.to_sx(mx)
+        if game.baseMap[my][mx] in [Stage.blockType.BLOCK, Stage.blockType.WALL]
+          tsx = Stage.toSx(mx)
           k.x = 0
           if @v.x >= 0
             vxt = tsx - p.x
           else
-            vxt = p.x - (tsx + MAP_M)
+            vxt = p.x - (tsx + mapM)
           vxt -= 5
           break
       dx = Math.min(dx, vxt)
@@ -355,20 +317,20 @@ class Player
     for p in cposs
       ty = p.y + @v.y
       p.x += dx
-      [mx, msy] = Stage.to_mpos(p)
-      mey = Stage.to_my(ty)
+      [mx, msy] = Stage.toMpos(p)
+      mey = Stage.toMy(ty)
       vyt = Math.abs vy
       msy += 1
       if @v.y < 0
         msy -= 2
       for my in [msy..mey]
-        if game.baseMap[my][mx] in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
-          tsy = Stage.to_sy(my)
+        if game.baseMap[my][mx] in [Stage.blockType.BLOCK, Stage.blockType.WALL]
+          tsy = Stage.toSy(my)
           k.y = 0
           if @v.y >= 0
             vyt = tsy - p.y
           else
-            vyt = p.y - (tsy + MAP_M)
+            vyt = p.y - (tsy + mapM)
           vyt -= 5
           break
       dy = Math.min(dy, vyt)
@@ -379,13 +341,13 @@ class Player
     @pos.y += dy
     @v = k
 
-  get_mps: ->
-    [@msx, @msy] = Stage.to_mpos(@pos)
-    [@mex, @mey] = Stage.to_mpos(new Victor(@pos.x + @width, @pos.y + @height))
+  recoverMapMP: ->
+    [@msx, @msy] = Stage.toMpos(@pos)
+    [@mex, @mey] = Stage.toMpos(new Victor(@pos.x + @width, @pos.y + @height))
     for my in [@msy..@mey]
       for mx in [@msx..@mex]
-        if game.baseMap[my][mx] == Stage.BlockType.MP
-          game.baseMap[my][mx] = Stage.BlockType.NONE
+        if game.baseMap[my][mx] == Stage.blockType.MP
+          game.baseMap[my][mx] = Stage.blockType.NONE
           @mp += 3
     DomManager.updatePlayerDom(this)
     game.map.loadData(game.baseMap)
@@ -396,32 +358,32 @@ class Player
 
   die: ->
     print('die')
-    @S.opacity = 0.5
+    @s.opacity = 0.5
     @v = zerovic()
-    @is_die = true
-    # @S.frame = Frame.None
+    @isDie = true
+    # @s.frame = frame.none
     # @diemove()
 
   diemove: ->
-    @S.tl.clear()
-    @S.tl.moveTo(init_pos[@team].x * MAP_M,
-                      init_pos[@team].y * MAP_M,
-                      FPS / 2)
-    .delay(FPS).and().repeat(->
-      @S.opacity = @S.age % 2
-    , FPS).then(->
-      @S.opacity = 1.0
-      @is_die = false
+    @s.tl.clear()
+    @s.tl.moveTo(Stage.initPos[@team].x * mapM,
+                      Stage.initPos[@team].y * mapM,
+                      fps / 2)
+    .delay(fps).and().repeat(->
+      @s.opacity = @s.age % 2
+    , fps).then(->
+      @s.opacity = 1.0
+      @isDie = false
     )
 
   r: ->
     @width / 2
-  ox: ->
+  oX: ->
     @pos.x + @width / 2
-  oy: ->
+  oY: ->
     @pos.y + @height / 2
-  opos: ->
-    new Victor(@ox(), @oy())
+  oPos: ->
+    new Victor(@oX(), @oY())
 
 class Shot
   pos: zerovic()
@@ -431,91 +393,98 @@ class Shot
   width: 16
   height: 16
 
-  @Frame:
-    None: -1
-    ItemShot: 2
+  @frame:
+    none: -1
+    itemShot: 2
 
   constructor: (@pos, @v, @team) ->
-    @S = new Sprite(32, 32)
-    @S.image = core.assets['/images/item.png']
-    @S.frame = Shot.Frame.ItemShot
-    @S.moveTo(@pos.x, @pos.y)
-    @S.tl.scaleTo(0.5, 0.5)
+    @s = new Sprite(32, 32)
+    @s.image = core.assets['/images/item.png']
+    @s.frame = Shot.frame.itemShot
+    @s.moveTo(@pos.x, @pos.y)
+    @s.tl.scaleTo(0.5, 0.5)
     rad = Math.atan2(@v.x, @v.y)
-    @S.rotation = 180 - rad * 180 / Math.PI
-    @S.addEventListener Event.ENTER_FRAME, =>
+    @s.rotation = 180 - rad * 180 / Math.PI
+    @s.addEventListener Event.ENTER_FRAME, =>
       @onenterframe()
-    core.rootScene.addChild(@S)
+    core.rootScene.addChild(@s)
 
   onenterframe: ->
     @pos.add(@v)
-    @S.moveTo(@pos.x, @pos.y)
+    @s.moveTo(@pos.x, @pos.y)
     # @v.multiply(@a)
 
     # ブロック衝突判定
-    if Stage.map_type(@opos()) in [Stage.BlockType.BLOCK, Stage.BlockType.WALL]
-      core.rootScene.removeChild(@S)
+    if Stage.mapType(@oPos()) in [Stage.blockType.BLOCK, Stage.blockType.WALL]
+      core.rootScene.removeChild(@s)
 
     # MP の分布変更
-    if @S.age % 10 == 0
-      [mx, my] = Stage.to_mpos(@opos())
+    if @s.age % 10 == 0
+      [mx, my] = Stage.toMpos(@oPos())
       if game.baseMap[my][mx] not in
-          [Stage.BlockType.WALL, Stage.BlockType.WALL]
-        game.baseMap[my][mx] = Stage.BlockType.MP
+          [Stage.blockType.WALL, Stage.blockType.WALL]
+        game.baseMap[my][mx] = Stage.blockType.MP
         game.map.loadData(game.baseMap)
         @mp -= 1
 
     # プレイヤー衝突判定
     for id, player of game.players
-      if player.team == @team || player.is_die
+      if player.team == @team || player.isDie
         continue
-      dx = player.ox() - @ox()
-      dy = player.oy() - @oy()
+      dx = player.oY() - @oY()
+      dy = player.oY() - @oY()
       if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
         player.v.add(@v.multiply(new Victor(3.0, 3.0)))
-        core.rootScene.removeChild(@S)
+        core.rootScene.removeChild(@s)
         player.damage()
         return
 
   r: ->
     @width / 2
-  ox: ->
+  oX: ->
     @pos.x + @width / 2
-  oy: ->
+  oY: ->
     @pos.y + @height / 2
-  opos: ->
-    new Victor(@ox(), @oy())
+  oPos: ->
+    new Victor(@oX(), @oY())
 
 # 指定があればステージタイプを決める
-if get_params['type'] ?
-  STAGE = get_params['type']
+if getParams['type'] ?
+  stageType = getParams['type']
 else
-  STAGE = Stage.Type.blocks
+  stageType = Stage.type.blocks
 # [0, 2, 3, 4][Math.floor(Math.random() * 4)]
 
 
 $ ->
+  Controller =
+    left: 0
+    right: 1
+
+  gameFont = '50px "ヒラギノ角ゴ ProN W3",
+   "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif'
+
+
   # enchant game
   enchant()
-
   # core setting
-  core = new Core(MAP_WIDTH, MAP_HEIGHT + FOOTER_HEIGHT)
+  core = new Core(mapWidth, mapHeight + footerHeight)
   core.preload ['/images/player.png'
     '/images/icon0.png'
     '/images/map0.png'
     '/images/item.png']
-  core.fps = FPS
+  core.fps = fps
 
   # global
   # NOTE: term 言い回しは正当？
-  game_term = null
+  term = null
 
-  timer_label = null
-  score_bar = null
-  score_cover = null
+  timerLabel = null
+  scoreBar = null
+  scoreCover = null
   score = null
 
-  game_start_time = 0
+  startTime = 0
 
   # socket io
   socket = io.connect()
@@ -525,10 +494,10 @@ $ ->
 
     ### debug init ###
     sp = new Sprite(2000, 2000)
-    debug_surface = new Surface(2000, 2000)
-    sp.image = debug_surface
+    debugSurface = new Surface(2000, 2000)
+    sp.image = debugSurface
     core.rootScene.addChild(sp)
-    game_init()
+    gameInit()
 
   oldTime = new Date
   fpss = []
@@ -542,165 +511,71 @@ $ ->
     fpss.push(fps)
     if fpss.length == 100
       # sum
-      fps_avg = fpss.reduce (x, y) -> x + y
-      print "fps:", (fps_avg / 100).toFixed(2)
+      fpsAvg = fpss.reduce (x, y) -> x + y
+      print "fps:", (fpsAvg / 100).toFixed(2)
       fpss = []
   core.start()
 
-  game_init = ->
+  gameInit = ->
     core.rootScene.remove()
-    game_term = GameTerm.ready
+    term = term.ready
     # player は手前
 
-    timer_label = new Label()
-    timer_label.moveTo(MAP_WIDTH / 2 - 20, MAP_HEIGHT + 10)
-    timer_label.font = GAME_FONT
-    timer_label.addEventListener Event.ENTER_FRAME, ->
-      if game_term != GameTerm.progress
+    timerLabel = new Label()
+    timerLabel.moveTo(mapWidth / 2 - 20, mapHeight + 10)
+    timerLabel.font = gameFont
+    timerLabel.addEventListener Event.ENTER_FRAME, ->
+      if term != term.progress
         return
-      progress = parseInt((core.frame - game_start_time) / core.fps)
-      time = GAME_TIME_LIMIT_SEC - progress
+      progress = parseInt((core.frame - startTime) / core.fps)
+      time = gameTimeLimitSec - progress
       @text = time + ""
-      if (time == GAME_TIME_PRE_FINISH)
-        score_cover.tl.scaleTo(1.0, 1.0, FPS * GAME_TIME_PRE_FINISH)
-        .delay(FPS).scaleTo(0, 1.0, FPS * 3).then ->
+      if (time == gameTimePreFinish)
+        scoreCover.tl.scaleTo(1.0, 1.0, fps * gameTimePreFinish)
+        .delay(fps).scaleTo(0, 1.0, fps * 3).then ->
           core.rootScene.removeChild(@)
 
       if (time == 0)
-        game_result()
+        gameResult()
 
-    score_bar = new Sprite(MAP_WIDTH, FOOTER_HEIGHT)
-    score_bar.image = new Surface(MAP_WIDTH, FOOTER_HEIGHT)
-    score_bar.moveTo(0, MAP_HEIGHT)
+    scoreBar = new Sprite(mapWidth, footerHeight)
+    scoreBar.image = new Surface(mapWidth, footerHeight)
+    scoreBar.moveTo(0, mapHeight)
 
-    score_cover = new Sprite(MAP_WIDTH * 0.5, FOOTER_HEIGHT)
-    score_cover.backgroundColor = "gray"
-    score_cover.scale(0, 1.0)
-    score_cover.moveTo(MAP_WIDTH * 0.75, MAP_HEIGHT)
+    scoreCover = new Sprite(mapWidth * 0.5, footerHeight)
+    scoreCover.backgroundColor = "gray"
+    scoreCover.scale(0, 1.0)
+    scoreCover.moveTo(mapWidth * 0.75, mapHeight)
 
     score = [0, 0, 0, 0]
 
     btn = new Button("Start")
     margin = 20
-    btn.moveTo(margin, MAP_HEIGHT + margin)
+    btn.moveTo(margin, mapHeight + margin)
     btn.ontouchstart = ->
       core.rootScene.removeChild(@)
-      game_start()
+      gameStart()
 
     core.rootScene.backgroundColor = "#AAA"
-    core.rootScene.addChild(score_bar)
-    core.rootScene.addChild(score_cover)
+    core.rootScene.addChild(scoreBar)
+    core.rootScene.addChild(scoreCover)
     core.rootScene.addChild(btn)
-    core.rootScene.addChild(timer_label)
+    core.rootScene.addChild(timerLabel)
 
-  game_start = ->
-    game_term = GameTerm.progress
-    game_start_time = core.frame
+  gameStart = ->
+    term = term.progress
+    startTime = core.frame
 
-  game_result = ->
-    game_term = GameTerm.result
+  gameResult = ->
+    term = term.result
 
     btn = new Button("Ready")
     margin = 20
-    btn.moveTo(margin, MAP_HEIGHT + margin)
+    btn.moveTo(margin, mapHeight + margin)
     btn.ontouchstart = ->
       core.rootScene.removeChild(@)
-      game_init()
+      gameInit()
     core.rootScene.addChild(btn)
-
-
-  fill_pos_circle = (x, y, r, team) ->
-    draw_circle(x, y, r, COL_LIB[team])
-    [mx, my] = Stage.to_mpos(new Victor(x, y))
-    mr = Math.floor(r / MAP_M)
-    mr2 = mr * mr
-    for j in [-mr..mr]
-      for i in [-mr..mr]
-        if j * j + i * i > mr2
-          continue
-        fill_map(mx + i, my + j, team)
-    if SHOW_TYPE == ShowType.matrix_fill
-      game.map.loadData(game.baseMap)
-    # NOTE: マップに対する変更箇所全てに必要
-    update_score()
-
-  fill_map = (mx, my, team) ->
-    if eu.clamp(my, MAP_HEIGHT_N - 2, 1) != my or
-        eu.clamp(mx, MAP_WIDTH_N - 2, 1) != mx
-      return
-    pre = game.baseMap[my][mx]
-    if pre == team + COL_SHIFT or Stage.is_block(pre)
-      return
-    game.baseMap[my][mx] = team + COL_SHIFT
-    # スコア更新
-    score[team] += 1
-    if pre == 0
-      return
-    score[pre - 1] -= 1
-
-
-  is_player_block_type = (type) ->
-    COL_SHIFT <= type < COL_SHIFT + 4
-
-  draw_circle = (x, y, r, col, force = false) ->
-    if SHOW_TYPE != ShowType.graphical and !force
-      return
-
-  kill_player_circle = (x, y, r, team) ->
-    r2 = r * r
-    for player in game.players
-      if player.team == team or player.is_die
-        continue
-      dx = player.ox() - x
-      dy = player.oy() - y
-      if dx * dx + dy * dy > r2
-        continue
-      fill_pos_circle(player.ox(), player.oy(), PLAYER_DIE_RADIUS, team)
-      player.die()
-
-  fill_pos_line = (x1, y1, x2, y2, team) ->
-    c = 10
-    for i in [0...c]
-      px = x2 + (i / c) * (x1 - x2)
-      py = y2 + (i / c) * (y1 - y2)
-      [mx, my] = Stage.to_mpos(px, py)
-      for dx in [-1...2]
-        for dy in [-1...2]
-          fill_map(mx + dx, my + dy, team)
-    if SHOW_TYPE == ShowType.matrix_fill
-      game.map.loadData(game.baseMap)
-    # graphical line
-    update_score()
-
-  kill_player_line = (x1, y1, x2, y2, team) ->
-    # NOTE: 軽量化出来そうな処理
-    c = 10
-    for player in game.players
-      if player.team == team or player.is_die
-        continue
-      [mpx, mpy] = Stage.to_mpos(player.ox(), player.oy())
-      for i in [0...c]
-        px = x2 + (i / c) * (x1 - x2)
-        py = y2 + (i / c) * (y1 - y2)
-        [mx, my] = Stage.to_mpos(px, py)
-        if (-1 <= mx - mpx <= 1 && -1 <= my - mpy <= 1)
-          fill_pos_circle(player.ox(), player.oy(), PLAYER_DIE_RADIUS, team)
-          player.die()
-          break
-
-
-  update_score = ->
-    max = Math.max.apply(null, score)
-    context = score_bar.image.context
-    context.beginPath()
-    context.clearRect(0, 0, MAP_WIDTH, FOOTER_HEIGHT)
-    for i in [0..3]
-      context.fillStyle = COL_LIB[i]
-      # 右端からトップチームを100% とした割合
-      h = FOOTER_HEIGHT * i / 4
-      context.fillRect(0, h, score[i] * MAP_WIDTH / max, FOOTER_HEIGHT / 4)
-    context.closePath()
-    context.fill()
 
   socket.emit 'new',
     room: 'top'
@@ -711,12 +586,12 @@ $ ->
     if data.pow == 0
       return
     if data.con == Controller.left
-      game.walk_player(data.id, data.rad, data.pow)
+      game.walkPlayer(data.id, data.rad, data.pow)
     else
-      game.shot_player(data.id, data.rad, data.pow)
+      game.shotPlayer(data.id, data.rad, data.pow)
 
   socket.on 'shake', (data) ->
-    game.dash_player(data.id)
+    game.dashPlayer(data.id)
 
   socket.on 'count', (data) ->
     $count = $('#count')
