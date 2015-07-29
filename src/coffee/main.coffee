@@ -46,7 +46,9 @@ print = (params...) ->
   else
     console.log params
 
-get_params = ElzupUtils.get_parameters()
+# alias
+eu = ElzupUtils
+get_params = eu.get_parameters()
 
 Controller =
   left: 0
@@ -191,10 +193,10 @@ class Stage
     [Stage.to_mx(spos.x + r), Stage.to_my(spos.y + r)]
 
   @to_mx = (sx) ->
-    ElzupUtils.clamp(Math.floor(sx / MAP_M), MAP_WIDTH_N - 1)
+    eu.clamp(Math.floor(sx / MAP_M), MAP_WIDTH_N - 1)
 
   @to_my = (sy) ->
-    ElzupUtils.clamp(Math.floor(sy / MAP_M), MAP_HEIGHT_N - 1)
+    eu.clamp(Math.floor(sy / MAP_M), MAP_HEIGHT_N - 1)
 
   @to_spos = (mx, my) ->
     new Victor(Stage.to_sx(mx), Stage.to_sy(my))
@@ -228,7 +230,7 @@ class Player
   width: 32
   height: 32
 
-  Frame:
+  @Frame:
     None: -1
     Stand: 0
     Walk: 1
@@ -284,14 +286,17 @@ class Player
       @S.rotation = 180 - @rad * 180 / Math.PI
 
   dash: ->
-    @walk(@dire_rad(), 1000)
+    @walk(@dire_rad_v(), 1000)
 
   dire_rad: ->
     (1 - @S.rotation / 180) * Math.PI
 
+  dire_rad_v: ->
+    rad = Math.atan2(@v.x, @v.y)
+
   onenterframe: ->
     if @moved()
-      f = [Player.Frame.Walk, Player.Frame.Stand][ElzupUtils.period(@S.age, 8, 2)]
+      f = [Player.Frame.Walk, Player.Frame.Stand][eu.period(@S.age, 8, 2)]
       @S.frame = @team * 5 + f
     else
       @S.frame = @team * 5 + Player.Frame.Stand
@@ -454,7 +459,8 @@ class Shot
     # MP の分布変更
     if @S.age % 10 == 0
       [mx, my] = Stage.to_mpos(@opos())
-      if game.baseMap[my][mx] not in [Stage.BlockType.WALL, Stage.BlockType.WALL]
+      if game.baseMap[my][mx] not in
+          [Stage.BlockType.WALL, Stage.BlockType.WALL]
         game.baseMap[my][mx] = Stage.BlockType.MP
         game.map.loadData(game.baseMap)
         @mp -= 1
@@ -619,8 +625,8 @@ $ ->
     update_score()
 
   fill_map = (mx, my, team) ->
-    if ElzupUtils.clamp(my, MAP_HEIGHT_N - 2, 1) != my or
-        ElzupUtils.clamp(mx, MAP_WIDTH_N - 2, 1) != mx
+    if eu.clamp(my, MAP_HEIGHT_N - 2, 1) != my or
+        eu.clamp(mx, MAP_WIDTH_N - 2, 1) != mx
       return
     pre = game.baseMap[my][mx]
     if pre == team + COL_SHIFT or Stage.is_block(pre)
