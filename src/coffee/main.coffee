@@ -180,7 +180,7 @@ class Player
   col: null
   isDie: false
   mp: 16
-  hp: 8
+  hp: 16
   pointer: null
   preShotAge: 0
   width: 32
@@ -228,7 +228,7 @@ class Player
     back = new Sprite(32, 8)
     back.image = core.assets['/images/hpbar.png']
     bar.addChild(back)
-    @updateBar(bar, 16, frame)
+    @updateBar(bar, bar.num, frame)
     core.rootScene.addChild(bar)
     heightShift = 5
     if frame == Player.barType.mp
@@ -247,12 +247,13 @@ class Player
   updateBar: (bar, diff, frame = Player.barType.hp) ->
     if diff == 0
       return
+    bar.num += diff
     if diff > 0
-      for i in [0...bar.num]
+      for i in [0...diff]
         scale = new Sprite(2, 8)
         scale.image = core.assets['/images/bar_cell.png']
         scale.frame = frame
-        scale.x = bar.x + 2 * i
+        scale.x = 2 * (bar.childNodes.length - 1)
         bar.addChild(scale)
       return
     for i in [0...diff]
@@ -260,6 +261,8 @@ class Player
 
   close: ->
     DomManager.removePlayerDom(this)
+    core.rootScene.removeChild(@sHpBar)
+    core.rootScene.removeChild(@sMpBar)
     core.rootScene.removeChild(@s)
 
   damage: ->
@@ -402,6 +405,7 @@ class Player
           game.baseMap[my][mx] = Stage.blockType.none
           cmp += 1
     DomManager.updatePlayerDom(this)
+    game.map.loadData(game.baseMap)
     @updateMp(cmp)
 
   moved: ->
@@ -482,7 +486,7 @@ class Shot
     for id, player of game.players
       if player.team == @team || player.isDie
         continue
-      dx = player.oY() - @oY()
+      dx = player.oX() - @oX()
       dy = player.oY() - @oY()
       if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
         player.v.add(@v.multiply(new Victor(3.0, 3.0)))
