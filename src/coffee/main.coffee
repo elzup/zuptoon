@@ -179,8 +179,8 @@ class Player
   team: 0
   col: null
   isDie: false
-  mp: 100
-  hp: 100
+  mp: 16
+  hp: 8
   pointer: null
   preShotAge: 0
   width: 32
@@ -228,13 +228,7 @@ class Player
     back = new Sprite(32, 8)
     back.image = core.assets['/images/hpbar.png']
     bar.addChild(back)
-    for i in [0...bar.num]
-      scale = new Sprite(2, 8)
-      scale.image = core.assets['/images/bar_cell.png']
-      print(frame)
-      scale.frame = frame
-      scale.x = bar.x + 2 * i
-      bar.addChild(scale)
+    @updateBar(bar, 16, frame)
     core.rootScene.addChild(bar)
     heightShift = 5
     if frame == Player.barType.mp
@@ -242,12 +236,34 @@ class Player
     bar.moveTo(@pos.x, @pos.y + @height + heightShift)
     return bar
 
+  updateHp: (diff) ->
+    @updateBar(@sHpBar, diff, Player.barType.hp)
+    @hp += diff
+
+  updateMp: (diff) ->
+    @updateBar(@sMpBar, diff, Player.barType.mp)
+    @mp += diff
+
+  updateBar: (bar, diff, frame = Player.barType.hp) ->
+    if diff == 0
+      return
+    if diff > 0
+      for i in [0...bar.num]
+        scale = new Sprite(2, 8)
+        scale.image = core.assets['/images/bar_cell.png']
+        scale.frame = frame
+        scale.x = bar.x + 2 * i
+        bar.addChild(scale)
+      return
+    for i in [0...diff]
+      bar.removeChild(bar.lastChild)
+
   close: ->
     DomManager.removePlayerDom(this)
     core.rootScene.removeChild(@s)
 
   damage: ->
-    @hp -= 20
+    @updateHp(-2)
     if @hp <= 0
       @die()
     DomManager.updatePlayerDom(this)
@@ -256,10 +272,9 @@ class Player
     @preShotAge + Player.shotRapidDelay < @s.age
 
   shot: (@rad, @pow)->
-    if @mp < 5 or @isDie or not @isShotable()
+    if @mp == 0 or @isDie or not @isShotable()
       return
-    # TODO: mp 消費量バランス
-    @mp -= 5
+    @updateMp(-1)
     # mr = @pow / 90 * 10
     mr = 10
     v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
@@ -282,7 +297,7 @@ class Player
     if @sHpBar?
       @sHpBar.moveTo(x, y + @height + 5)
     if @sMpBar?
-      @sMpBar.moveTo(x, y + @height + 5)
+      @sMpBar.moveTo(x, y + @height + 10)
 
   dash: ->
     @walk(@direRadV(), 1000)
@@ -380,14 +395,14 @@ class Player
   recoverMapMP: ->
     [@msx, @msy] = Stage.toMpos(@pos)
     [@mex, @mey] = Stage.toMpos(new Victor(@pos.x + @width, @pos.y + @height))
+    cmp = 0
     for my in [@msy..@mey]
       for mx in [@msx..@mex]
         if game.baseMap[my][mx] == Stage.blockType.mp
           game.baseMap[my][mx] = Stage.blockType.none
-          @mp += 3
+          cmp += 1
     DomManager.updatePlayerDom(this)
-    game.map.loadData(game.baseMap)
-
+    @updateMp(cmp)
 
   moved: ->
     @v.length() != 0
