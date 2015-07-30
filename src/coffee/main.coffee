@@ -86,9 +86,9 @@ class Game
               padding < i < (mapWidthN - padding) and
               (i + 15) % span < col and
               (j + 15) % span < col
-            @baseMap[j][i] = Stage.blockType.BLOCK
+            @baseMap[j][i] = Stage.blockType.block
           if j == 0 or j == mapHeightN - 1 or i == 0 or i == mapWidthN - 1
-            @baseMap[j][i] = Stage.blockType.WALL
+            @baseMap[j][i] = Stage.blockType.wall
       @map.loadData(@baseMap)
     else
       if stageType == Stage.type.wall
@@ -102,7 +102,7 @@ class Game
         for j in [0...mapHeightN]
           for i in [0...mapWidthN]
             p = @baseMap[j][i]
-            if not Stage.isBlock(p) and p != Stage.blockType.NONE
+            if not Stage.isBlock(p) and p != Stage.blockType.none
               Stage.initPos[p - 1] = new Victor(i, j)
         @map.loadData(@baseMap)
         print "map loaded"
@@ -131,10 +131,10 @@ class Stage
     sprite: 4
 
   @blockType:
-    NONE: 0
-    MP: 9
-    BLOCK: 5
-    WALL: 6
+    none: 0
+    mp: 9
+    block: 5
+    wall: 6
 
   @initPos = [
     new Victor(mapWidthN / 7, mapHeightN / 10)
@@ -145,7 +145,7 @@ class Stage
 
 
   @isBlock: (type) ->
-    type in [Stage.blockType.BLOCK, Stage.blockType.WALL]
+    type in [Stage.blockType.block, Stage.blockType.wall]
 
   @toMpos = (spos, r = 0) ->
     [Stage.toMx(spos.x + r), Stage.toMy(spos.y + r)]
@@ -212,6 +212,7 @@ class Player
     DomManager.addPlayerDom(this)
     DomManager.updatePlayerDom(this)
     core.rootScene.addChild(@s)
+
 
   close: ->
     DomManager.removePlayerDom(this)
@@ -299,7 +300,7 @@ class Player
       if @v.x < 0
         msx -= 2
       for mx in [msx..mex]
-        if game.baseMap[my][mx] in [Stage.blockType.BLOCK, Stage.blockType.WALL]
+        if game.baseMap[my][mx] in [Stage.blockType.block, Stage.blockType.wall]
           tsx = Stage.toSx(mx)
           k.x = 0
           if @v.x >= 0
@@ -324,7 +325,7 @@ class Player
       if @v.y < 0
         msy -= 2
       for my in [msy..mey]
-        if game.baseMap[my][mx] in [Stage.blockType.BLOCK, Stage.blockType.WALL]
+        if game.baseMap[my][mx] in [Stage.blockType.block, Stage.blockType.wall]
           tsy = Stage.toSy(my)
           k.y = 0
           if @v.y >= 0
@@ -346,8 +347,8 @@ class Player
     [@mex, @mey] = Stage.toMpos(new Victor(@pos.x + @width, @pos.y + @height))
     for my in [@msy..@mey]
       for mx in [@msx..@mex]
-        if game.baseMap[my][mx] == Stage.blockType.MP
-          game.baseMap[my][mx] = Stage.blockType.NONE
+        if game.baseMap[my][mx] == Stage.blockType.mp
+          game.baseMap[my][mx] = Stage.blockType.none
           @mp += 3
     DomManager.updatePlayerDom(this)
     game.map.loadData(game.baseMap)
@@ -415,15 +416,15 @@ class Shot
     # @v.multiply(@a)
 
     # ブロック衝突判定
-    if Stage.mapType(@oPos()) in [Stage.blockType.BLOCK, Stage.blockType.WALL]
+    if Stage.mapType(@oPos()) in [Stage.blockType.block, Stage.blockType.wall]
       core.rootScene.removeChild(@s)
 
-    # MP の分布変更
+    # mp の分布変更
     if @s.age % 10 == 0
       [mx, my] = Stage.toMpos(@oPos())
       if game.baseMap[my][mx] not in
-          [Stage.blockType.WALL, Stage.blockType.WALL]
-        game.baseMap[my][mx] = Stage.blockType.MP
+          [Stage.blockType.wall, Stage.blockType.wall]
+        game.baseMap[my][mx] = Stage.blockType.mp
         game.map.loadData(game.baseMap)
         @mp -= 1
 
