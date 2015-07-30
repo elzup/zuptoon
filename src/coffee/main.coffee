@@ -204,7 +204,7 @@ class Player
     @s = new Sprite(32, 32)
     @pos = clone(Stage.initPos[@team]).multiply(mapMVec)
     @pos.subtract(new Victor(@r(), @r()))
-    @s.moveTo(@pos.x, @pos.y)
+    @move()
     @s.image = core.assets['/images/player.png']
     @s.frame = @team * 5
     @col = Player.color[@team]
@@ -212,7 +212,35 @@ class Player
     DomManager.addPlayerDom(this)
     DomManager.updatePlayerDom(this)
     core.rootScene.addChild(@s)
+    @setupBars()
 
+  @barType:
+    hp: 0
+    mp: 1
+
+  setupBars: ->
+    @sHpBar = @createBar(Player.barType.hp)
+    @sMpBar = @createBar(Player.barType.mp)
+
+  createBar: (frame = Player.barType.hp) ->
+    bar = new Group()
+    bar.num = 16
+    back = new Sprite(32, 8)
+    back.image = core.assets['/images/hpbar.png']
+    bar.addChild(back)
+    for i in [0...bar.num]
+      scale = new Sprite(2, 8)
+      scale.image = core.assets['/images/bar_cell.png']
+      print(frame)
+      scale.frame = frame
+      scale.x = bar.x + 2 * i
+      bar.addChild(scale)
+    core.rootScene.addChild(bar)
+    heightShift = 5
+    if frame == Player.barType.mp
+      heightShift = 10
+    bar.moveTo(@pos.x, @pos.y + @height + heightShift)
+    return bar
 
   close: ->
     DomManager.removePlayerDom(this)
@@ -249,6 +277,13 @@ class Player
     if @isShotable()
       @s.rotation = 180 - @rad * 180 / Math.PI
 
+  move: (x = @pos.x, y = @pos.y) ->
+    @s.moveTo(x, y)
+    if @sHpBar?
+      @sHpBar.moveTo(x, y + @height + 5)
+    if @sMpBar?
+      @sMpBar.moveTo(x, y + @height + 5)
+
   dash: ->
     @walk(@direRadV(), 1000)
 
@@ -276,7 +311,7 @@ class Player
     @v.multiply(@a)
     if @v.length() < 0.5
       @v = zerovic()
-    @s.moveTo(@pos.x, @pos.y)
+    @move()
 
   safeMove: ->
     vx = @v.x
@@ -402,7 +437,7 @@ class Shot
     @s = new Sprite(32, 32)
     @s.image = core.assets['/images/item.png']
     @s.frame = Shot.frame.itemShot
-    @s.moveTo(@pos.x, @pos.y)
+    @move()
     @s.tl.scaleTo(0.5, 0.5)
     rad = Math.atan2(@v.x, @v.y)
     @s.rotation = 180 - rad * 180 / Math.PI
@@ -412,7 +447,7 @@ class Shot
 
   onenterframe: ->
     @pos.add(@v)
-    @s.moveTo(@pos.x, @pos.y)
+    @move()
     # @v.multiply(@a)
 
     # ブロック衝突判定
@@ -439,6 +474,9 @@ class Shot
         core.rootScene.removeChild(@s)
         player.damage()
         return
+
+  move: (x = @pos.x, y = @pos.y) ->
+    @s.moveTo(x, y)
 
   r: ->
     @width / 2
@@ -471,9 +509,11 @@ $ ->
   # core setting
   core = new Core(mapWidth, mapHeight + footerHeight)
   core.preload ['/images/player.png'
-    '/images/icon0.png'
-    '/images/map0.png'
-    '/images/item.png']
+                '/images/icon0.png'
+                '/images/map0.png'
+                '/images/hpbar.png'
+                '/images/bar_cell.png'
+                '/images/item.png']
   core.fps = fps
 
   # global
