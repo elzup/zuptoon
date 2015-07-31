@@ -179,7 +179,7 @@ class Player
   team: 0
   col: null
   isDie: false
-  mp: 16
+  mp: 160
   hp: 16
   pointer: null
   preShotAge: 0
@@ -225,9 +225,9 @@ class Player
   createBar: (frame = Player.barType.hp) ->
     bar = new Group()
     bar.num = 16
-    back = new Sprite(32, 8)
-    back.image = core.assets['/images/hpbar.png']
-    bar.addChild(back)
+    # back = new Sprite(32, 8)
+    # back.image = core.assets['/images/hpbar.png']
+    # bar.addChild(back)
     @updateBar(bar, bar.num, frame)
     core.rootScene.addChild(bar)
     heightShift = 5
@@ -241,8 +241,13 @@ class Player
     @hp += diff
 
   updateMp: (diff) ->
-    @updateBar(@sMpBar, diff, Player.barType.mp)
+    # hard code for mp range
+    mpPre = @mp / 10
     @mp += diff
+    mpNow = @mp / 10
+    d = parseInt(mpNow - mpPre)
+    if d != 0
+      @updateBar(@sMpBar, d, Player.barType.mp)
 
   updateBar: (bar, diff, frame = Player.barType.hp) ->
     if diff == 0
@@ -277,7 +282,7 @@ class Player
   shot: (@rad, @pow)->
     if @mp == 0 or @isDie or not @isShotable()
       return
-    @updateMp(-1)
+    @updateMp(-10)
     # mr = @pow / 90 * 10
     mr = 10
     v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
@@ -406,7 +411,8 @@ class Player
           cmp += 1
     DomManager.updatePlayerDom(this)
     game.map.loadData(game.baseMap)
-    @updateMp(cmp)
+    if cmp > 0
+      @updateMp(cmp)
 
   moved: ->
     @v.length() != 0
@@ -507,12 +513,11 @@ class Shot
     new Victor(@oX(), @oY())
 
 # 指定があればステージタイプを決める
-if getParams['type'] ?
-  stageType = getParams['type']
+if getParams.type
+  stageType = parseInt(getParams.type)
 else
   stageType = Stage.type.blocks
 # [0, 2, 3, 4][Math.floor(Math.random() * 4)]
-
 
 $ ->
   Controller =
