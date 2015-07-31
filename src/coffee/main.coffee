@@ -183,10 +183,13 @@ class Stage
       mey = eu.clamp(oy + k, mapHeightN - 1, 0)
       msx = eu.clamp(ox - k, mapWidthN - 1, 0)
       mex = eu.clamp(ox + k, mapWidthN - 1, 0)
+      kk = Math.pow(k, 2)
       for my in [msy..mey]
         for mx in [msx..mex]
-          # 四角の端のみ塗りつぶす
-          if mp <= 0 or (my not in [msy, mey] and mx not in [msx, mex])
+          dx = ox - mx
+          dy = oy - my
+          # 円形に塗りつぶす
+          if mp <= 0 or kk < dx * dx + dy * dy
             continue
           type = game.baseMap[my][mx]
           if type in Stage.noFill()
@@ -457,6 +460,9 @@ class Player
     @s.opacity = 0.5
     @v = zerovic()
     @isDie = true
+    [mx, my] = Stage.toMpos(@oPos())
+    Stage.fillMp(mx, my, @mp)
+    @updateMp(- @mp)
     # @s.frame = frame.none
     # @diemove()
 
