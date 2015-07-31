@@ -1,4 +1,7 @@
 @charset "utf-8"
+@import "kouto-swiss"
+
+ks-meyer-reset()
 
 body
   font 14px "Lucida Grande", Helvetica, Arial, sans-serif
@@ -75,6 +78,8 @@ player-card(col)
   justify-content space-between
   width 80%
   .team-box
+    h2
+      margin 5px
     width 23%
     &[team="0"]
       background red + #666
@@ -91,3 +96,7 @@ player-card(col)
         margin-right 3px
       button
         float right
+        background: #AFAFAF;
+        border: none;
+        box-shadow: 0 0 14px;
+        border-radius: 100%;

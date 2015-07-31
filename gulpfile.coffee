@@ -1,5 +1,7 @@
 gulp = require 'gulp'
 gutil = require 'gulp-util'
+koutoSwiss = require 'kouto-swiss'
+nib = require 'nib'
 $ = require('gulp-load-plugins')()
 
 # config
@@ -59,8 +61,10 @@ gulp.task 'script', ->
 gulp.task "style", ->
   gulp
     .src config.stylus.watch
+    .pipe $.sourcemaps.init()
     .pipe $.stylus
       compress: true
+      use: [nib(), koutoSwiss()]
     .pipe $.autoprefixer
       browsers: ['last 2 versions']
     .pipe $.sourcemaps.write('.')

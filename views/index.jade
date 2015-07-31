@@ -1,7 +1,9 @@
 extends layout
 
-block head_script
+block head_link
   link(href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet")
+
+block head_script
   script(src='//192.168.1.50/socket.io/socket.io.js')
   script(src='//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js')
   script(src='javascripts/enchant.js')
@@ -25,10 +27,10 @@ block content
         div#qr
       section#players-box
         section.team-box(team=0)
-          h1 赤チーム
+          h2 赤チーム
         section.team-box(team=1)
-          h1 黄チーム
+          h2 黄チーム
         section.team-box(team=2)
-          h1 青チーム
+          h2 青チーム
         section.team-box(team=3)
-          h1 緑チーム
+          h2 緑チーム

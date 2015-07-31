@@ -725,7 +725,7 @@ class DomManager
         $i.addClass('fa-apple')
       else
         $i.addClass('fa-desktop')
-    $delI = ($ '<i/>').addClass('fa fa-minus-circle')
+    $delI = ($ '<i/>').addClass('fa fa-minus')
     $delBtn = ($ '<button/>').addClass('del-btn').append($delI)
     $delBtn.click ->
       game.removePlayer(player.id)
