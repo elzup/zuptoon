@@ -47,6 +47,7 @@ term =
   progress: 1
   result: 2
 
+
 class Game
   constructor: ->
     @players = {}
@@ -143,9 +144,8 @@ class Stage
     new Victor(mapWidthN * 6 / 7, mapHeightN * 9 / 10)
   ]
 
-
   @isBlock: (type) ->
-    type in [Stage.blockType.block, Stage.blockType.wall]
+    type in Stage.wall()
 
   @toMpos = (spos, r = 0) ->
     [Stage.toMx(spos.x + r), Stage.toMy(spos.y + r)]
@@ -169,6 +169,37 @@ class Stage
     [mx, my] = Stage.toMpos(spos)
     game.baseMap[my][mx]
 
+  @wall = ->
+    [Stage.blockType.block, Stage.blockType.wall]
+
+  @noFill = ->
+    [Stage.blockType.block, Stage.blockType.wall, Stage.blockType.mp]
+
+  @fillMp = (ox, oy, mp) ->
+    k = 0
+    # 中央から外側に向けて塗りつぶす
+    while true
+      msy = eu.clamp(oy - k, mapHeightN - 1, 0)
+      mey = eu.clamp(oy + k, mapHeightN - 1, 0)
+      msx = eu.clamp(ox - k, mapWidthN - 1, 0)
+      mex = eu.clamp(ox + k, mapWidthN - 1, 0)
+      for my in [msy..mey]
+        for mx in [msx..mex]
+          # 四角の端のみ塗りつぶす
+          if mp <= 0 or (my not in [msy, mey] and mx not in [msx, mex])
+            continue
+          type = game.baseMap[my][mx]
+          print 't', game.baseMap[my][mx]
+          if type in Stage.noFill()
+            continue
+          game.baseMap[my][mx] = Stage.blockType.mp
+          mp -= 1
+      k += 1
+      if k > mapHeightN
+        break
+      if mp <= 0
+        break
+    game.map.loadData(game.baseMap)
 
 class Player
   id: null
@@ -242,12 +273,16 @@ class Player
 
   updateMp: (diff) ->
     # hard code for mp range
-    mpPre = @mp / 10
+    mpPre = parseInt(@mp / 10)
     @mp += diff
-    mpNow = @mp / 10
-    d = parseInt(mpNow - mpPre)
+    if @mp < 0
+      diff -= @mp
+      @mp = 0
+    mpNow = parseInt(@mp / 10)
+    d = mpNow - mpPre
     if d != 0
       @updateBar(@sMpBar, d, Player.barType.mp)
+    diff
 
   updateBar: (bar, diff, frame = Player.barType.hp) ->
     if diff == 0
@@ -282,7 +317,7 @@ class Player
   shot: (@rad, @pow)->
     if @mp == 0 or @isDie or not @isShotable()
       return
-    @updateMp(-10)
+    pmp = -@updateMp(-10)
     # mr = @pow / 90 * 10
     mr = 10
     v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
@@ -290,7 +325,7 @@ class Player
 
     pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
     # un save instance
-    new Shot(pos, v, @team)
+    new Shot(pos, v, @team, pmp)
     @s.rotation = 180 - @rad * 180 / Math.PI
     DomManager.updatePlayerDom(this)
 
@@ -358,7 +393,7 @@ class Player
       if @v.x < 0
         msx -= 2
       for mx in [msx..mex]
-        if game.baseMap[my][mx] in [Stage.blockType.block, Stage.blockType.wall]
+        if Stage.isBlock(game.baseMap[my][mx])
           tsx = Stage.toSx(mx)
           k.x = 0
           if @v.x >= 0
@@ -450,7 +485,6 @@ class Shot
   pos: zerovic()
   v: zerovic()
   a: new Victor(1.0, 1.0)
-  mp: 5
   width: 16
   height: 16
 
@@ -458,7 +492,7 @@ class Shot
     none: -1
     itemShot: 2
 
-  constructor: (@pos, @v, @team) ->
+  constructor: (@pos, @v, @team, @mp) ->
     @s = new Sprite(32, 32)
     @s.image = core.assets['/images/item.png']
     @s.frame = Shot.frame.itemShot
@@ -477,16 +511,7 @@ class Shot
 
     # ブロック衝突判定
     if Stage.mapType(@oPos()) in [Stage.blockType.block, Stage.blockType.wall]
-      core.rootScene.removeChild(@s)
-
-    # mp の分布変更
-    if @s.age % 10 == 0
-      [mx, my] = Stage.toMpos(@oPos())
-      if game.baseMap[my][mx] not in
-          [Stage.blockType.wall, Stage.blockType.wall]
-        game.baseMap[my][mx] = Stage.blockType.mp
-        game.map.loadData(game.baseMap)
-        @mp -= 1
+      @die()
 
     # プレイヤー衝突判定
     for id, player of game.players
@@ -496,9 +521,14 @@ class Shot
       dy = player.oY() - @oY()
       if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
         player.v.add(@v.multiply(new Victor(3.0, 3.0)))
-        core.rootScene.removeChild(@s)
+        @die()
         player.damage()
         return
+
+  die: ->
+    [mx, my] = Stage.toMpos(@oPos())
+    Stage.fillMp(mx, my, @mp)
+    core.rootScene.removeChild(@s)
 
   move: (x = @pos.x, y = @pos.y) ->
     @s.moveTo(x, y)
