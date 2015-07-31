@@ -189,7 +189,6 @@ class Stage
           if mp <= 0 or (my not in [msy, mey] and mx not in [msx, mex])
             continue
           type = game.baseMap[my][mx]
-          print 't', game.baseMap[my][mx]
           if type in Stage.noFill()
             continue
           game.baseMap[my][mx] = Stage.blockType.mp
@@ -508,6 +507,13 @@ class Shot
     @pos.add(@v)
     @move()
     # @v.multiply(@a)
+
+    if @s.age > 20 and @s.age % 3 and @mp > 0
+      [mx, my] = Stage.toMpos(@oPos())
+      if game.baseMap[my][mx] not in Stage.noFill()
+        game.baseMap[my][mx] = Stage.blockType.mp
+        game.map.loadData(game.baseMap)
+        @mp -= 1
 
     # ブロック衝突判定
     if Stage.mapType(@oPos()) in [Stage.blockType.block, Stage.blockType.wall]
