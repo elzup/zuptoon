@@ -714,7 +714,7 @@ $ ->
 
 class DomManager
   @addPlayerDom: (player) ->
-    nameElem = ($ '<p/>').attr
+    $playerElem = ($ '<p/>').attr
       user_id: player.id
       class: 'player'
     $i = ($ '<i/>').addClass('fa')
@@ -725,12 +725,14 @@ class DomManager
         $i.addClass('fa-apple')
       else
         $i.addClass('fa-desktop')
-    nameElem.append($i)
-
-    nameElem.append(($ '<span/>').addClass('name').html(player.id.substr(0, 8)))
-    print nameElem
-    print ($ ".group-box[team=#{player.team}]")
-    ($ ".team-box[team=#{player.team}]").append(nameElem)
+    $delI = ($ '<i/>').addClass('fa fa-minus-circle')
+    $delBtn = ($ '<button/>').addClass('del-btn').append($delI)
+    $delBtn.click ->
+      game.removePlayer(player.id)
+    $playerElem.append($i)
+    $name = ($ '<span/>').addClass('name').html(player.id.substr(0, 8))
+    $playerElem.append($i).append($name).append($delBtn)
+    ($ ".team-box[team=#{player.team}]").append($playerElem)
 
   @updatePlayerDom: (player) ->
     pElem = ($ ".player[user_id=#{player.id}]")
