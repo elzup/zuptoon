@@ -1,6 +1,7 @@
 extends layout
 
 block head_script
+  link(href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet")
   script(src='//192.168.1.50/socket.io/socket.io.js')
   script(src='//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js')
   script(src='javascripts/enchant.js')
@@ -16,10 +17,18 @@ block content
   body
     // section#wrapper
     section#game
-      div#enchant-stage(style="width: 960px; height: 760px")
+      div#enchant-stage(style="width: 960px")
     section#infos
       section#qr-box
         h3
           | スマホで参加!
         div#qr
       section#players-box
+        section.team-box(team=0)
+          h1 赤チーム
+        section.team-box(team=1)
+          h1 黄チーム
+        section.team-box(team=2)
+          h1 青チーム
+        section.team-box(team=3)
+          h1 緑チーム

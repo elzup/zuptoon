@@ -19,11 +19,28 @@ class @ElzupUtils
       params[key] = decodeURIComponent(val)
     params
 
-  @vec_vertical = (x, y)->
+  @vec_vertical = (x, y) ->
     t = Math.atan2(x, y)
     t += Math.PI / 2
     [Math.cos(t), Math.sin(t)]
 
   # range 周期を split分割してどの位置であるか
-  @period = (n, range, split=2)->
+  @period = (n, range, split=2) ->
     Math.floor(n % range / (range / split) % split)
+
+  @userAgent:
+    iphone: 'iPhone'
+    ipad: 'iPad'
+    ipod: 'iPod'
+    android: 'Android'
+    pc: 0
+
+  @getUA = ->
+    ua = navigator.userAgent
+    for key, value of ElzupUtils.userAgent
+      if value == 0
+        continue
+      if ua.indexOf(value) != -1
+        return value
+    return ElzupUtils.userAgent.pc
+

@@ -110,9 +110,11 @@ $ ->
   socket = io.connect()
 
   get_params = ElzupUtils.get_parameters()
+
   socket.emit 'new',
     room: 'user'
     team: get_params['team']
+    ua: ElzupUtils.getUA()
   # TODO: remove debug outputs
   console.log('socket connect try')
 

@@ -57,8 +57,8 @@ class Game
     for id, player of @players
       player.onenterframe()
 
-  addPlayer: (id, team) ->
-    player = new Player(id, team)
+  addPlayer: (id, team, ua) ->
+    player = new Player(id, team, ua)
     @players[id] = player
     console.log 'add:', @players
 
@@ -230,7 +230,8 @@ class Player
     damage: 3
     super: 4
 
-  constructor: (@id, @team) ->
+  # ua は別処理のが理想的
+  constructor: (@id, @team, @ua) ->
     @s = new Sprite(32, 32)
     @pos = clone(Stage.initPos[@team]).multiply(mapMVec)
     @pos.subtract(new Victor(@r(), @r()))
@@ -699,7 +700,7 @@ $ ->
     $count.text(data.count)
 
   socket.on 'createuser', (data) ->
-    game.addPlayer(data.id, data.team)
+    game.addPlayer(data.id, data.team, data.ua)
 
   socket.on 'removeuser', (data) ->
     console.log 'remove', data
@@ -707,20 +708,26 @@ $ ->
 
 class DomManager
   @addPlayerDom: (player) ->
-    nameElem = ($ '<div/>').attr(
+    nameElem = ($ '<p/>').attr
       user_id: player.id
       class: 'player'
-      team: player.team
-    )
-    nameElem.append(($ '<p/>').addClass('name').html(player.id))
-    nameElem.append(($ '<p/>').addClass('hp'))
-    nameElem.append(($ '<p/>').addClass('mp'))
-    ($ '#players-box').append(nameElem)
+    $i = ($ '<i/>').addClass('fa')
+    switch (player.ua)
+      when eu.userAgent.android
+        $i.addClass('fa-android')
+      when eu.userAgent.iphone
+        $i.addClass('fa-apple')
+      else
+        $i.addClass('fa-desktop')
+    nameElem.append($i)
+
+    nameElem.append(($ '<span/>').addClass('name').html(player.id.substr(0, 8)))
+    print nameElem
+    print ($ ".group-box[team=#{player.team}]")
+    ($ ".team-box[team=#{player.team}]").append(nameElem)
 
   @updatePlayerDom: (player) ->
     pElem = ($ ".player[user_id=#{player.id}]")
-    pElem.children('.hp').html("HP: #{player.hp}")
-    pElem.children('.mp').html("MP: #{player.mp}")
 
   @removePlayerDom: (player) ->
     ($ ".player[user_id=#{player.id}]").remove()

@@ -72,18 +72,20 @@ player-card(col)
 
 #players-box
   display flex
-  flex-wrap: wrap
-  .player
-    color white
-    margin 10px
-    padding 10px
-    border 1px solid
+  justify-content space-between
+  width 80%
+  .team-box
+    width 23%
     &[team="0"]
-      player-card(red)
+      background red + #666
     &[team="1"]
-      player-card(orange - #555)
+      background #FFB22F
     &[team="2"]
-      player-card(blue)
+      background blue + #666
     &[team="3"]
-      player-card(green)
-
+      background green + #666
+    .player
+      color white
+      margin 3px 10px
+      i
+        margin-right 3px
