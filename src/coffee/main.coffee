@@ -5,12 +5,6 @@ fps = 20
 eu = ElzupUtils
 Vector2 = tm.geom.Vector2
 
-mapM = 8
-mapWidthN = 64 * 2
-mapHeightN = 48 * 2
-mapWidth = mapWidthN * mapM
-mapHeight = mapHeightN * mapM
-
 # global variables
 
 core = null
@@ -21,7 +15,7 @@ getParams = eu.get_parameters()
 class Game
   constructor: ->
     @players = {}
-    @setupMap()
+    @stage = new Stage()
 
   onenterframe: ->
     for id, player of @players
@@ -39,50 +33,6 @@ class Game
     delete @players[id]
     console.log 'remove:', @players
 
-  setupMap: ->
-    @map = new Map(mapM, mapM)
-    @map.image = core.assets['/images/map0.png']
-    core.rootScene.addChild(@map)
-    # 指定があればステージタイプを決める
-    if getParams.type
-      stageType = parseInt(getParams.type)
-    else
-      stageType = Stage.type.blocks
-    if stageType in [Stage.type.flat, Stage.type.blocks]
-      @baseMap = [0...mapHeightN]
-      for j in @baseMap
-        @baseMap[j] = [0...mapWidthN]
-        for i in @baseMap[j]
-          @baseMap[j][i] = 0
-          span = 30
-          col = 5
-          padding = 5
-          if stageType == Stage.type.blocks and
-              padding < j < (mapHeightN - padding) and
-              padding < i < (mapWidthN - padding) and
-              (i + 15) % span < col and
-              (j + 15) % span < col
-            @baseMap[j][i] = Stage.blockType.block
-          if j == 0 or j == mapHeightN - 1 or i == 0 or i == mapWidthN - 1
-            @baseMap[j][i] = Stage.blockType.wall
-      @map.loadData(@baseMap)
-    else
-      if stageType == Stage.type.wall
-        filename = "/data/map_wall.json"
-      else if stageType == Stage.type.vortex
-        filename = "/data/map_vortex.json"
-      else
-        filename = "/data/map_sprite.json"
-      $.getJSON filename, (data) =>
-        @baseMap = data
-        for j in [0...mapHeightN]
-          for i in [0...mapWidthN]
-            p = @baseMap[j][i]
-            if not Stage.isBlock(p) and p != Stage.blockType.none
-              Stage.initPos[p - 1] = new Vector2(i, j)
-        @map.loadData(@baseMap)
-        console.log "map loaded"
-
   walkPlayer: (id, rad, pow) ->
     if !@players[id]?
       return
@@ -99,6 +49,18 @@ class Game
     @players[id].shot(rad, pow)
 
 class Stage
+
+  @cellSize = 8
+  @widthN = 64 * 2
+  @heightN = 48 * 2
+  @width = Stage.widthN * Stage.cellSize
+  @height = Stage.heightN * Stage.cellSize
+
+  @widthTopN = 0
+  @widthEndN = Stage.widthN - 1
+  @heightTopN = 0
+  @heightEndN = Stage.heightN - 1
+
   @type:
     flat: 0
     blocks: 1
@@ -113,51 +75,106 @@ class Stage
     wall: 6
 
   @initPos = [
-    new Vector2(mapWidthN / 7, mapHeightN / 10)
-    new Vector2(mapWidthN * 6 / 7, mapHeightN / 10)
-    new Vector2(mapWidthN / 7, mapHeightN * 6 / 10)
-    new Vector2(mapWidthN * 6 / 7, mapHeightN * 9 / 10)
+    new Vector2(Stage.widthN / 7, Stage.heightN / 10)
+    new Vector2(Stage.widthN * 6 / 7, Stage.heightN / 10)
+    new Vector2(Stage.widthN / 7, Stage.heightN * 6 / 10)
+    new Vector2(Stage.widthN * 6 / 7, Stage.heightN * 9 / 10)
   ]
+
+  @widthEnds: () ->
+    [Stage.widthEndN, Stage.widthTopN]
+
+  @heightEnds: () ->
+    [Stage.heightEndN, Stage.heightTopN]
+
+  constructor: ->
+    @map = new Map(Stage.cellSize, Stage.cellSize)
+    @map.image = core.assets['/images/map0.png']
+    core.rootScene.addChild(@map)
+    @setupMap()
+
+  setupMap: ->
+    # 指定があればステージタイプを決める
+    if getParams.type
+      stageType = parseInt(getParams.type)
+    else
+      stageType = Stage.type.blocks
+    if stageType in [Stage.type.flat, Stage.type.blocks]
+      @baseMap = [0...Stage.heightN]
+      for j in @baseMap
+        @baseMap[j] = [0...Stage.widthN]
+        for i in @baseMap[j]
+          @baseMap[j][i] = 0
+          span = 30
+          col = 5
+          padding = 5
+          if stageType == Stage.type.blocks and
+              padding < j < (Stage.heightN - padding) and
+              padding < i < (Stage.widthN - padding) and
+              (i + 15) % span < col and
+              (j + 15) % span < col
+            @baseMap[j][i] = Stage.blockType.block
+          if j in Stage.heightEnds() or i in Stage.widthEnds()
+            @baseMap[j][i] = Stage.blockType.wall
+      @map.loadData(@baseMap)
+    else
+      if stageType == Stage.type.wall
+        filename = "/data/map_wall.json"
+      else if stageType == Stage.type.vortex
+        filename = "/data/map_vortex.json"
+      else
+        filename = "/data/map_sprite.json"
+      $.getJSON filename, (data) =>
+        @baseMap = data
+        for j in [0...Stage.heightN]
+          for i in [0...Stage.widthN]
+            p = @baseMap[j][i]
+            if not Stage.isBlock(p) and p != Stage.blockType.none
+              Stage.initPos[p - 1] = new Vector2(i, j)
+        @map.loadData(@baseMap)
+        console.log "map loaded"
+
 
   @isBlock: (type) ->
     type in Stage.wall()
 
-  @toMpos = (spos, r = 0) ->
+  @toMpos: (spos, r = 0) ->
     [Stage.toMx(spos.x + r), Stage.toMy(spos.y + r)]
 
-  @toMx = (sx) ->
-    eu.clamp(Math.floor(sx / mapM), mapWidthN - 1)
+  @toMx: (sx) ->
+    eu.clamp(Math.floor(sx / Stage.cellSize), Stage.widthN - 1)
 
-  @toMy = (sy) ->
-    eu.clamp(Math.floor(sy / mapM), mapHeightN - 1)
+  @toMy: (sy) ->
+    eu.clamp(Math.floor(sy / Stage.cellSize), Stage.heightN - 1)
 
-  @toSpos = (mx, my) ->
+  @toSpos: (mx, my) ->
     new Vector2(Stage.toSx(mx), Stage.toSy(my))
 
-  @toSx = (mx) ->
-    mapM * mx
+  @toSx: (mx) ->
+    Stage.cellSize * mx
 
-  @toSy = (my) ->
-    mapM * my
+  @toSy: (my) ->
+    Stage.cellSize * my
 
-  @mapType = (spos) ->
+
+  mapType: (spos) ->
     [mx, my] = Stage.toMpos(spos)
-    game.baseMap[my][mx]
+    @baseMap[my][mx]
 
-  @wall = ->
+  @wall: ->
     [Stage.blockType.block, Stage.blockType.wall]
 
-  @noFill = ->
+  @noFill: ->
     [Stage.blockType.block, Stage.blockType.wall, Stage.blockType.mp]
 
-  @fillMp = (ox, oy, mp) ->
+  fillMp: (ox, oy, mp) ->
     k = 0
     # 中央から外側に向けて塗りつぶす
     while true
-      msy = eu.clamp(oy - k, mapHeightN - 1, 0)
-      mey = eu.clamp(oy + k, mapHeightN - 1, 0)
-      msx = eu.clamp(ox - k, mapWidthN - 1, 0)
-      mex = eu.clamp(ox + k, mapWidthN - 1, 0)
+      msy = eu.clamp(oy - k, Stage.heightN - 1, 0)
+      mey = eu.clamp(oy + k, Stage.heightN - 1, 0)
+      msx = eu.clamp(ox - k, Stage.widthN - 1, 0)
+      mex = eu.clamp(ox + k, Stage.widthN - 1, 0)
       kk = Math.pow(k, 2)
       for my in [msy..mey]
         for mx in [msx..mex]
@@ -166,17 +183,17 @@ class Stage
           # 円形に塗りつぶす
           if mp <= 0 or kk < dx * dx + dy * dy
             continue
-          type = game.baseMap[my][mx]
+          type = @baseMap[my][mx]
           if type in Stage.noFill()
             continue
-          game.baseMap[my][mx] = Stage.blockType.mp
+          @baseMap[my][mx] = Stage.blockType.mp
           mp -= 1
       k += 1
-      if k > mapHeightN
+      if k > Stage.heightN
         break
       if mp <= 0
         break
-    game.map.loadData(game.baseMap)
+    @map.loadData(@baseMap)
 
 class Player
   id: null
@@ -211,7 +228,7 @@ class Player
   # ua は別処理のが理想的
   constructor: (@id, @team, @ua) ->
     @s = new Sprite(32, 32)
-    @pos = Stage.initPos[@team].clone().mul(mapM)
+    @pos = Stage.initPos[@team].clone().mul(Stage.cellSize)
     @pos.sub(new Vector2(@r(), @r()))
     @move()
     @s.image = core.assets['/images/player.png']
@@ -372,13 +389,13 @@ class Player
       if @v.x < 0
         msx -= 2
       for mx in [msx..mex]
-        if Stage.isBlock(game.baseMap[my][mx])
+        if Stage.isBlock(game.stage.baseMap[my][mx])
           tsx = Stage.toSx(mx)
           k.x = 0
           if @v.x >= 0
             vxt = tsx - p.x
           else
-            vxt = p.x - (tsx + mapM)
+            vxt = p.x - (tsx + Stage.cellSize)
           vxt -= 5
           break
       dx = Math.min(dx, vxt)
@@ -397,13 +414,13 @@ class Player
       if @v.y < 0
         msy -= 2
       for my in [msy..mey]
-        if game.baseMap[my][mx] in [Stage.blockType.block, Stage.blockType.wall]
+        if Stage.isBlock(game.stage.baseMap[my][mx])
           tsy = Stage.toSy(my)
           k.y = 0
           if @v.y >= 0
             vyt = tsy - p.y
           else
-            vyt = p.y - (tsy + mapM)
+            vyt = p.y - (tsy + Stage.cellSize)
           vyt -= 5
           break
       dy = Math.min(dy, vyt)
@@ -420,11 +437,11 @@ class Player
     cmp = 0
     for my in [@msy..@mey]
       for mx in [@msx..@mex]
-        if game.baseMap[my][mx] == Stage.blockType.mp
-          game.baseMap[my][mx] = Stage.blockType.none
+        if game.stage.baseMap[my][mx] == Stage.blockType.mp
+          game.stage.baseMap[my][mx] = Stage.blockType.none
           cmp += 1
     DomManager.updatePlayerDom(this)
-    game.map.loadData(game.baseMap)
+    game.stage.map.loadData(game.stage.baseMap)
     if cmp > 0
       @updateMp(cmp)
 
@@ -437,15 +454,15 @@ class Player
     @v = Vector2.ZERO.clone()
     @isDie = true
     [mx, my] = Stage.toMpos(@oPos())
-    Stage.fillMp(mx, my, @mp)
+    game.stage.fillMp(mx, my, @mp)
     @updateMp(- @mp)
     # @s.frame = frame.none
     # @diemove()
 
   diemove: ->
     @s.tl.clear()
-    @s.tl.moveTo(Stage.initPos[@team].x * mapM,
-                      Stage.initPos[@team].y * mapM,
+    @s.tl.moveTo(Stage.initPos[@team].x * Stage.cellSize,
+                      Stage.initPos[@team].y * Stage.cellSize,
                       fps / 2)
     .delay(fps).and().repeat(->
       @s.opacity = @s.age % 2
@@ -492,13 +509,14 @@ class Shot
 
     if @s.age > 20 and @s.age % 3 and @mp > 0
       [mx, my] = Stage.toMpos(@oPos())
-      if game.baseMap[my][mx] not in Stage.noFill()
-        game.baseMap[my][mx] = Stage.blockType.mp
-        game.map.loadData(game.baseMap)
+      if game.stage.baseMap[my][mx] not in Stage.noFill()
+        game.stage.baseMap[my][mx] = Stage.blockType.mp
+        game.stage.map.loadData(game.stage.baseMap)
         @mp -= 1
 
     # ブロック衝突判定
-    if Stage.mapType(@oPos()) in [Stage.blockType.block, Stage.blockType.wall]
+
+    if Stage.isBlock(game.stage.mapType(@oPos()))
       @die()
 
     # プレイヤー衝突判定
@@ -515,7 +533,7 @@ class Shot
 
   die: ->
     [mx, my] = Stage.toMpos(@oPos())
-    Stage.fillMp(mx, my, @mp)
+    game.stage.fillMp(mx, my, @mp)
     core.rootScene.removeChild(@s)
 
   move: (x = @pos.x, y = @pos.y) ->
@@ -544,7 +562,7 @@ $ ->
   # enchant game
   enchant()
   # core setting
-  core = new Core(mapWidth, mapHeight)
+  core = new Core(Stage.width, Stage.height)
   core.preload ['/images/player.png'
                 '/images/icon0.png'
                 '/images/map0.png'
