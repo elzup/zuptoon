@@ -1,23 +1,20 @@
 # constants
 fps = 20
 
+# alias
+eu = ElzupUtils
+Vector2 = tm.geom.Vector2
+
 mapM = 8
 mapWidthN = 64 * 2
 mapHeightN = 48 * 2
 mapWidth = mapWidthN * mapM
 mapHeight = mapHeightN * mapM
-mapMVec = new Victor(mapM, mapM)
 
 # global variables
 
 core = null
 game = null
-
-zerovic = ->
-  new Victor(0, 0)
-
-clone = (v) ->
-  new Victor(0, 0).copy(v)
 
 print = (params...) ->
   if params.length == 1
@@ -29,14 +26,12 @@ print = (params...) ->
   else
     console.log params
 
-# alias
-eu = ElzupUtils
 getParams = eu.get_parameters()
 
 debugSurface = null
 
 toXY = (rad) ->
-  new Victor(Math.cos(rad), Math.sin(rad))
+  new Vector2(Math.cos(rad), Math.sin(rad))
 
 gameTimeLimitSec = 90
 gameTimePreFinish = parseInt(gameTimeLimitSec / 6)
@@ -104,7 +99,7 @@ class Game
           for i in [0...mapWidthN]
             p = @baseMap[j][i]
             if not Stage.isBlock(p) and p != Stage.blockType.none
-              Stage.initPos[p - 1] = new Victor(i, j)
+              Stage.initPos[p - 1] = new Vector2(i, j)
         @map.loadData(@baseMap)
         print "map loaded"
 
@@ -138,10 +133,10 @@ class Stage
     wall: 6
 
   @initPos = [
-    new Victor(mapWidthN / 7, mapHeightN / 10)
-    new Victor(mapWidthN * 6 / 7, mapHeightN / 10)
-    new Victor(mapWidthN / 7, mapHeightN * 6 / 10)
-    new Victor(mapWidthN * 6 / 7, mapHeightN * 9 / 10)
+    new Vector2(mapWidthN / 7, mapHeightN / 10)
+    new Vector2(mapWidthN * 6 / 7, mapHeightN / 10)
+    new Vector2(mapWidthN / 7, mapHeightN * 6 / 10)
+    new Vector2(mapWidthN * 6 / 7, mapHeightN * 9 / 10)
   ]
 
   @isBlock: (type) ->
@@ -157,7 +152,7 @@ class Stage
     eu.clamp(Math.floor(sy / mapM), mapHeightN - 1)
 
   @toSpos = (mx, my) ->
-    new Victor(Stage.toSx(mx), Stage.toSy(my))
+    new Vector2(Stage.toSx(mx), Stage.toSy(my))
 
   @toSx = (mx) ->
     mapM * mx
@@ -205,10 +200,10 @@ class Stage
 
 class Player
   id: null
-  pos: zerovic()
-  v: zerovic()
-  a: new Victor(0.8, 0.8)
-  prePos: zerovic()
+  pos: Vector2.ZERO.clone()
+  v: Vector2.ZERO.clone()
+  a: new Vector2(0.8, 0.8)
+  prePos: Vector2.ZERO.clone()
   team: 0
   col: null
   isDie: false
@@ -236,8 +231,8 @@ class Player
   # ua は別処理のが理想的
   constructor: (@id, @team, @ua) ->
     @s = new Sprite(32, 32)
-    @pos = clone(Stage.initPos[@team]).multiply(mapMVec)
-    @pos.subtract(new Victor(@r(), @r()))
+    @pos = Stage.initPos[@team].clone().mul(mapM)
+    @pos.sub(new Vector2(@r(), @r()))
     @move()
     @s.image = core.assets['/images/player.png']
     @s.frame = @team * 5
@@ -322,19 +317,19 @@ class Player
       return
     pmp = -@updateMp(-10)
     # mr = @pow / 90 * 10
-    mr = 10
-    v = new Victor(0, 1).rotate(-@rad).normalize().multiply new Victor(mr, mr)
+    v = new Vector2(0, -1).setRadian(Math.PI / 2 - @rad).normalize().mul(10)
     @preShotAge = @s.age
 
-    pos = clone(@pos).add(clone(v).multiply(new Victor(3, 3)))
+    pos = @pos.clone().add(v.clone().mul(3))
     # un save instance
     new Shot(pos, v, @team, pmp)
     @s.rotation = 180 - @rad * 180 / Math.PI
     DomManager.updatePlayerDom(this)
 
   walk: (@rad, @pow) ->
-    mr = @pow / 90
-    @v.add new Victor(0, 2).rotate(-@rad).multiply(new Victor(mr, mr))
+    mr = @pow / 90 * 2
+    va = new Vector2.LEFT.clone().setRadian(Math.PI / 2 - @rad).mul(mr)
+    @v.add va
     if @isShotable()
       @s.rotation = 180 - @rad * 180 / Math.PI
 
@@ -360,7 +355,7 @@ class Player
       @s.frame = @team * 5 + f
     else
       @s.frame = @team * 5 + Player.frame.stand
-    @prePos.copy(@pos)
+    @prePos = @pos.clone()
 
     if @isDie
       return
@@ -369,22 +364,22 @@ class Player
 
     @safeMove()
     @recoverMapMP()
-    @v.multiply(@a)
+    @v.set(@v.x * @a.x, @v.y * @a.y)
     if @v.length() < 0.5
-      @v = zerovic()
+      @v = Vector2.ZERO.clone()
     @move()
 
   safeMove: ->
     vx = @v.x
     vy = @v.y
-    k = clone(@v)
+    k = @v.clone()
 
     dx = Math.abs(vx)
     dy = Math.abs(vy)
     cposs = []
     for deg in [0...360] by 30
       rad = deg * Math.PI * 2 / 360
-      cposs.push(toXY(rad).multiply(new Victor(@r(), @r())).add(@oPos()))
+      cposs.push(toXY(rad).mul(@r()).add(@oPos()))
 
     for p in cposs
       tx = p.x + @v.x
@@ -440,7 +435,7 @@ class Player
 
   recoverMapMP: ->
     [@msx, @msy] = Stage.toMpos(@pos)
-    [@mex, @mey] = Stage.toMpos(new Victor(@pos.x + @width, @pos.y + @height))
+    [@mex, @mey] = Stage.toMpos(new Vector2(@pos.x + @width, @pos.y + @height))
     cmp = 0
     for my in [@msy..@mey]
       for mx in [@msx..@mex]
@@ -458,7 +453,7 @@ class Player
   die: ->
     print('die')
     @s.opacity = 0.5
-    @v = zerovic()
+    @v = Vector2.ZERO.clone()
     @isDie = true
     [mx, my] = Stage.toMpos(@oPos())
     Stage.fillMp(mx, my, @mp)
@@ -485,12 +480,12 @@ class Player
   oY: ->
     @pos.y + @height / 2
   oPos: ->
-    new Victor(@oX(), @oY())
+    new Vector2(@oX(), @oY())
 
 class Shot
-  pos: zerovic()
-  v: zerovic()
-  a: new Victor(1.0, 1.0)
+  pos: Vector2.ZERO.clone()
+  v: Vector2.ZERO.clone()
+  a: new Vector2(1.0, 1.0)
   width: 16
   height: 16
 
@@ -513,7 +508,6 @@ class Shot
   onenterframe: ->
     @pos.add(@v)
     @move()
-    # @v.multiply(@a)
 
     if @s.age > 20 and @s.age % 3 and @mp > 0
       [mx, my] = Stage.toMpos(@oPos())
@@ -533,7 +527,7 @@ class Shot
       dx = player.oX() - @oX()
       dy = player.oY() - @oY()
       if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
-        player.v.add(@v.multiply(new Victor(3.0, 3.0)))
+        player.v.add(@v.mul(3.0))
         @die()
         player.damage()
         return
@@ -553,7 +547,7 @@ class Shot
   oY: ->
     @pos.y + @height / 2
   oPos: ->
-    new Victor(@oX(), @oY())
+    new Vector2(@oX(), @oY())
 
 # 指定があればステージタイプを決める
 if getParams.type
