@@ -1,6 +1,8 @@
-define () ->
+define ['dom_manager', 'shot', 'stage'], (DomManager, Shot, Stage) ->
+  # TODO: remove Stage
   # remove global
   fps = 20
+  eu = ElzupUtils
   Vector2 = tm.geom.Vector2
   class Player
     id: null
@@ -33,18 +35,18 @@ define () ->
       super: 4
 
     # ua は別処理のが理想的
-    constructor: (@id, @team, @ua) ->
+    constructor: (@id, @team, @ua, @core, @game) ->
       @s = new Sprite(32, 32)
       @pos = Stage.initPos[@team].clone().mul(Stage.cellSize)
       @pos.sub(new Vector2(@r(), @r()))
       @move()
-      @s.image = core.assets['/images/player.png']
+      @s.image = @core.assets['/images/player.png']
       @s.frame = @team * 5
       @col = Player.color[@team]
       @s._style.zIndex = -@zShift
       DomManager.addPlayerDom(this)
       DomManager.updatePlayerDom(this)
-      core.rootScene.addChild(@s)
+      @core.rootScene.addChild(@s)
       @setupBars()
 
     @barType:
@@ -58,11 +60,8 @@ define () ->
     createBar: (frame = Player.barType.hp) ->
       bar = new Group()
       bar.num = 16
-      # back = new Sprite(32, 8)
-      # back.image = core.assets['/images/hpbar.png']
-      # bar.addChild(back)
       @updateBar(bar, bar.num, frame)
-      core.rootScene.addChild(bar)
+      @core.rootScene.addChild(bar)
       heightShift = 5
       if frame == Player.barType.mp
         heightShift = 10
@@ -93,7 +92,7 @@ define () ->
       if diff > 0
         for i in [0...diff]
           scale = new Sprite(2, 8)
-          scale.image = core.assets['/images/bar_cell.png']
+          scale.image = @core.assets['/images/bar_cell.png']
           scale.frame = frame
           scale.x = 2 * (bar.childNodes.length - 1)
           bar.addChild(scale)
@@ -103,9 +102,9 @@ define () ->
 
     close: ->
       DomManager.removePlayerDom(this)
-      core.rootScene.removeChild(@sHpBar)
-      core.rootScene.removeChild(@sMpBar)
-      core.rootScene.removeChild(@s)
+      @core.rootScene.removeChild(@sHpBar)
+      @core.rootScene.removeChild(@sMpBar)
+      @core.rootScene.removeChild(@s)
 
     damage: ->
       @updateHp(-2)
@@ -126,7 +125,7 @@ define () ->
 
       pos = @pos.clone().add(v.clone().mul(3))
       # un save instance
-      new Shot(pos, v, @team, pmp)
+      new Shot(pos, v, @team, pmp, @core, @game)
       @s.rotation = 180 - @rad * 180 / Math.PI
       DomManager.updatePlayerDom(this)
 
@@ -196,7 +195,7 @@ define () ->
         if @v.x < 0
           msx -= 2
         for mx in [msx..mex]
-          if Stage.isBlock(game.stage.baseMap[my][mx])
+          if Stage.isBlock(@game.stage.baseMap[my][mx])
             tsx = Stage.toSx(mx)
             k.x = 0
             if @v.x >= 0
@@ -221,7 +220,7 @@ define () ->
         if @v.y < 0
           msy -= 2
         for my in [msy..mey]
-          if Stage.isBlock(game.stage.baseMap[my][mx])
+          if Stage.isBlock(@game.stage.baseMap[my][mx])
             tsy = Stage.toSy(my)
             k.y = 0
             if @v.y >= 0
@@ -244,11 +243,11 @@ define () ->
       cmp = 0
       for my in [@msy..@mey]
         for mx in [@msx..@mex]
-          if game.stage.baseMap[my][mx] == Stage.blockType.mp
-            game.stage.baseMap[my][mx] = Stage.blockType.none
+          if @game.stage.baseMap[my][mx] == Stage.blockType.mp
+            @game.stage.baseMap[my][mx] = Stage.blockType.none
             cmp += 1
       DomManager.updatePlayerDom(this)
-      game.stage.map.loadData(game.stage.baseMap)
+      @game.stage.map.loadData(@game.stage.baseMap)
       if cmp > 0
         @updateMp(cmp)
 
@@ -261,7 +260,7 @@ define () ->
       @v = Vector2.ZERO.clone()
       @isDie = true
       [mx, my] = Stage.toMpos(@oPos())
-      game.stage.fillMp(mx, my, @mp)
+      @game.stage.fillMp(mx, my, @mp)
       @updateMp(- @mp)
     # @s.frame = frame.none
     # @diemove()

@@ -1,15 +1,15 @@
-define ->
+define ['player', 'stage'], (Player, Stage) ->
   class Game
-    constructor: ->
+    constructor: (@core) ->
       @players = {}
-      @stage = new Stage()
+      @stage = new Stage(@core)
 
     onenterframe: ->
       for id, player of @players
         player.onenterframe()
 
     addPlayer: (id, team, ua) ->
-      player = new Player(id, team, ua)
+      player = new Player(id, team, ua, @core, this)
       @players[id] = player
       console.log 'add:', @players
 

@@ -1,7 +1,11 @@
 define ->
   # remove global
   fps = 20
+  eu = ElzupUtils
   Vector2 = tm.geom.Vector2
+
+  getParams = eu.get_parameters()
+
   class Stage
     @cellSize = 8
     @widthN = 64 * 2
@@ -40,10 +44,10 @@ define ->
     @heightEnds: () ->
       [Stage.heightEndN, Stage.heightTopN]
 
-    constructor: ->
+    constructor: (@core) ->
       @map = new Map(Stage.cellSize, Stage.cellSize)
-      @map.image = core.assets['/images/map0.png']
-      core.rootScene.addChild(@map)
+      @map.image = @core.assets['/images/map0.png']
+      @core.rootScene.addChild(@map)
       @setupMap()
 
     setupMap: ->
@@ -124,28 +128,28 @@ define ->
       k = 0
       # 中央から外側に向けて塗りつぶす
       while true
-        msy = eu.clamp(oy - k, Stage.heightN - 1, 0)
-        mey = eu.clamp(oy + k, Stage.heightN - 1, 0)
-        msx = eu.clamp(ox - k, Stage.widthN - 1, 0)
-        mex = eu.clamp(ox + k, Stage.widthN - 1, 0)
+        msy = eu.clamp(oy - k, Stage.heightEndN)
+        mey = eu.clamp(oy + k, Stage.heightEndN)
+        msx = eu.clamp(ox - k, Stage.widthEndN)
+        mex = eu.clamp(ox + k, Stage.widthEndN)
         kk = Math.pow(k, 2)
         for my in [msy..mey]
           for mx in [msx..mex]
             dx = ox - mx
             dy = oy - my
             # 円形に塗りつぶす
-            if mp <= 0 or kk < dx * dx + dy * dy
-              continue
-            type = @baseMap[my][mx]
+            if mp <= 0
+              break
+            type = @baseMap[my][mx] or kk < dx * dx + dy * dy
             if type in Stage.noFill()
               continue
             @baseMap[my][mx] = Stage.blockType.mp
             mp -= 1
-            k += 1
+        k += 1
         if k > Stage.heightN
           break
         if mp <= 0
           break
-    @map.loadData(@baseMap)
+      @map.loadData(@baseMap)
   return Stage
 

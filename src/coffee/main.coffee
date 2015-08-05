@@ -10,11 +10,7 @@ Vector2 = tm.geom.Vector2
 core = null
 game = null
 
-getParams = eu.get_parameters()
-
-require(['game', 'player', 'stage', 'shot'], (Game, Player, Stage, Shot) ->
-  console.log 'game out'
-  console.log Game
+require ['game', 'stage'], (Game, Stage) ->
   Controller =
     left: 0
     right: 1
@@ -35,7 +31,7 @@ require(['game', 'player', 'stage', 'shot'], (Game, Player, Stage, Shot) ->
   socket = io.connect()
 
   core.onload = ->
-    game = new Game
+    game = new Game(core)
     gameInit()
 
   oldTime = new Date
@@ -87,34 +83,3 @@ require(['game', 'player', 'stage', 'shot'], (Game, Player, Stage, Shot) ->
   socket.on 'removeuser', (data) ->
     console.log 'remove', data
     game.removePlayer(data.id)
-)
-
-# [0, 2, 3, 4][Math.floor(Math.random() * 4)]
-
-class DomManager
-  @addPlayerDom: (player) ->
-    $playerElem = ($ '<p/>').attr
-      user_id: player.id
-      class: 'player'
-    $i = ($ '<i/>').addClass('fa')
-    switch (player.ua)
-      when eu.userAgent.android
-        $i.addClass('fa-android')
-      when eu.userAgent.iphone
-        $i.addClass('fa-apple')
-      else
-        $i.addClass('fa-desktop')
-    $delI = ($ '<i/>').addClass('fa fa-minus')
-    $delBtn = ($ '<button/>').addClass('del-btn').append($delI)
-    $delBtn.click ->
-      game.removePlayer(player.id)
-    $playerElem.append($i)
-    $name = ($ '<span/>').addClass('name').html(player.id.substr(0, 8))
-    $playerElem.append($i).append($name).append($delBtn)
-    ($ ".team-box[team=#{player.team}]").append($playerElem)
-
-  @updatePlayerDom: (player) ->
-    pElem = ($ ".player[user_id=#{player.id}]")
-
-  @removePlayerDom: (player) ->
-    ($ ".player[user_id=#{player.id}]").remove()
