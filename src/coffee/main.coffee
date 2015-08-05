@@ -16,32 +16,7 @@ mapHeight = mapHeightN * mapM
 core = null
 game = null
 
-print = (params...) ->
-  if params.length == 1
-    console.log params[0]
-  else if params.length == 2
-    console.log params[0], params[1]
-  else if params.length == 3
-    console.log params[0], params[1], params[2]
-  else
-    console.log params
-
 getParams = eu.get_parameters()
-
-debugSurface = null
-
-toXY = (rad) ->
-  new Vector2(Math.cos(rad), Math.sin(rad))
-
-gameTimeLimitSec = 90
-gameTimePreFinish = parseInt(gameTimeLimitSec / 6)
-footerHeight = 80
-
-term =
-  ready: 0
-  progress: 1
-  result: 2
-
 
 class Game
   constructor: ->
@@ -68,6 +43,11 @@ class Game
     @map = new Map(mapM, mapM)
     @map.image = core.assets['/images/map0.png']
     core.rootScene.addChild(@map)
+    # 指定があればステージタイプを決める
+    if getParams.type
+      stageType = parseInt(getParams.type)
+    else
+      stageType = Stage.type.blocks
     if stageType in [Stage.type.flat, Stage.type.blocks]
       @baseMap = [0...mapHeightN]
       for j in @baseMap
@@ -101,7 +81,7 @@ class Game
             if not Stage.isBlock(p) and p != Stage.blockType.none
               Stage.initPos[p - 1] = new Vector2(i, j)
         @map.loadData(@baseMap)
-        print "map loaded"
+        console.log "map loaded"
 
   walkPlayer: (id, rad, pow) ->
     if !@players[id]?
@@ -379,7 +359,8 @@ class Player
     cposs = []
     for deg in [0...360] by 30
       rad = deg * Math.PI * 2 / 360
-      cposs.push(toXY(rad).mul(@r()).add(@oPos()))
+      basev = new Vector2(Math.cos(rad), Math.sin(rad))
+      cposs.push(basev.mul(@r()).add(@oPos()))
 
     for p in cposs
       tx = p.x + @v.x
@@ -451,7 +432,7 @@ class Player
     @v.length() != 0
 
   die: ->
-    print('die')
+    console.log 'die'
     @s.opacity = 0.5
     @v = Vector2.ZERO.clone()
     @isDie = true
@@ -549,11 +530,6 @@ class Shot
   oPos: ->
     new Vector2(@oX(), @oY())
 
-# 指定があればステージタイプを決める
-if getParams.type
-  stageType = parseInt(getParams.type)
-else
-  stageType = Stage.type.blocks
 # [0, 2, 3, 4][Math.floor(Math.random() * 4)]
 
 $ ->
@@ -568,7 +544,7 @@ $ ->
   # enchant game
   enchant()
   # core setting
-  core = new Core(mapWidth, mapHeight + footerHeight)
+  core = new Core(mapWidth, mapHeight)
   core.preload ['/images/player.png'
                 '/images/icon0.png'
                 '/images/map0.png'
@@ -577,28 +553,11 @@ $ ->
                 '/images/item.png']
   core.fps = fps
 
-  # global
-  # NOTE: term 言い回しは正当？
-  term = null
-
-  timerLabel = null
-  scoreBar = null
-  scoreCover = null
-  score = null
-
-  startTime = 0
-
   # socket io
   socket = io.connect()
 
   core.onload = ->
     game = new Game
-
-    ### debug init ###
-    sp = new Sprite(2000, 2000)
-    debugSurface = new Surface(2000, 2000)
-    sp.image = debugSurface
-    core.rootScene.addChild(sp)
     gameInit()
 
   oldTime = new Date
@@ -614,75 +573,20 @@ $ ->
     if fpss.length == 100
       # sum
       fpsAvg = fpss.reduce (x, y) -> x + y
-      print "fps:", (fpsAvg / 100).toFixed(2)
+      console.log "fps:", (fpsAvg / 100).toFixed(2)
       fpss = []
   core.start()
 
   gameInit = ->
     core.rootScene.remove()
-    term = term.ready
     # player は手前
 
-    timerLabel = new Label()
-    timerLabel.moveTo(mapWidth / 2 - 20, mapHeight + 10)
-    timerLabel.font = gameFont
-    timerLabel.addEventListener Event.ENTER_FRAME, ->
-      if term != term.progress
-        return
-      progress = parseInt((core.frame - startTime) / core.fps)
-      time = gameTimeLimitSec - progress
-      @text = time + ""
-      if (time == gameTimePreFinish)
-        scoreCover.tl.scaleTo(1.0, 1.0, fps * gameTimePreFinish)
-        .delay(fps).scaleTo(0, 1.0, fps * 3).then ->
-          core.rootScene.removeChild(@)
-
-      if (time == 0)
-        gameResult()
-
-    scoreBar = new Sprite(mapWidth, footerHeight)
-    scoreBar.image = new Surface(mapWidth, footerHeight)
-    scoreBar.moveTo(0, mapHeight)
-
-    scoreCover = new Sprite(mapWidth * 0.5, footerHeight)
-    scoreCover.backgroundColor = "gray"
-    scoreCover.scale(0, 1.0)
-    scoreCover.moveTo(mapWidth * 0.75, mapHeight)
-
-    score = [0, 0, 0, 0]
-
-    btn = new Button("Start")
-    margin = 20
-    btn.moveTo(margin, mapHeight + margin)
-    btn.ontouchstart = ->
-      core.rootScene.removeChild(@)
-      gameStart()
-
     core.rootScene.backgroundColor = "#AAA"
-    core.rootScene.addChild(scoreBar)
-    core.rootScene.addChild(scoreCover)
-    core.rootScene.addChild(btn)
-    core.rootScene.addChild(timerLabel)
-
-  gameStart = ->
-    term = term.progress
-    startTime = core.frame
-
-  gameResult = ->
-    term = term.result
-
-    btn = new Button("Ready")
-    margin = 20
-    btn.moveTo(margin, mapHeight + margin)
-    btn.ontouchstart = ->
-      core.rootScene.removeChild(@)
-      gameInit()
-    core.rootScene.addChild(btn)
 
   socket.emit 'new',
     room: 'top'
   # TODO: remove debug outputs
-  print 'socket connect try'
+  console.log 'socket connect try'
 
   socket.on 'move', (data) ->
     if data.pow == 0
