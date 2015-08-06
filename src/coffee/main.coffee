@@ -77,7 +77,7 @@ require ['game', 'stage'], (Game, Stage) ->
     $count.text(data.count)
 
   socket.on 'createuser', (data) ->
-    game.addPlayer(data.id, data.team, data.ua)
+    game.addPlayer(data.id, parseInt(data.team), data.ua)
 
   socket.on 'removeuser', (data) ->
     console.log 'remove', data

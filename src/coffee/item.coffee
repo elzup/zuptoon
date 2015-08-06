@@ -6,8 +6,8 @@ define ->
 
   class Item
     @type:
-      monopoly: 3
-      lifeUp: 4
+      monopoly: 6
+      lifeUp: 7
     width: 32
     height: 32
 

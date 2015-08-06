@@ -6,17 +6,17 @@ define ['stage'], (Stage) ->
     pos: Vector2.ZERO.clone()
     v: Vector2.ZERO.clone()
     a: new Vector2(1.0, 1.0)
-    width: 16
-    height: 16
+    width: 32
+    height: 32
 
     @frame:
       none: -1
       itemShot: 2
 
     constructor: (@pos, @v, @team, @mp, @core, @game) ->
-      @s = new Sprite(32, 32)
+      @s = new Sprite(@width, @height)
       @s.image = @core.assets['/images/item.png']
-      @s.frame = Shot.frame.itemShot
+      @s.frame = Shot.frame.itemShot + @team
       @move()
       @s.tl.scaleTo(0.5, 0.5)
       rad = Math.atan2(@v.x, @v.y)
