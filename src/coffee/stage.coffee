@@ -1,4 +1,4 @@
-define ->
+define ['item'], (Item) ->
   # remove global
   fps = 20
   eu = ElzupUtils
@@ -49,6 +49,7 @@ define ->
       @map.image = @core.assets['/images/map0.png']
       @core.rootScene.addChild(@map)
       @setupMap()
+      @items = []
 
     setupMap: ->
       # 指定があればステージタイプを決める
@@ -151,5 +152,39 @@ define ->
         if mp <= 0
           break
       @map.loadData(@baseMap)
+
+    inclementItem: ->
+      type = Item.getRandomType()
+      [mx, my] = @getRandomEmptyMPos()
+      console.log [mx, my]
+      item = new Item(mx, my, type, @core, @game, Stage.toSpos(mx, my))
+      @items.push(item)
+      console.log item
+      console.log "item generated"
+
+    getRandomEmptyMPos: ->
+      i = 0
+      while (true)
+        i += 1
+        if (i > 10000)
+          console.log "safe repeat break"
+          break
+        [mx, my] = Stage.getRandomMPos()
+        if Stage.isBlock(@baseMap[my][mx]) or @isOverlapItem(mx, my)
+          continue
+        return [mx, my]
+      console.log "add"
+
+    isOverlapItem: (mx, my) ->
+      for key, value of @items
+        if value.mx == mx and value.my == my
+          return true
+      return false
+
+    @getRandomMPos: ->
+      mx = eu.rand_range(Stage.widthN)
+      my = eu.rand_range(Stage.heightN)
+      return [mx, my]
+
   return Stage
 

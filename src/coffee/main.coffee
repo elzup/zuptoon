@@ -20,7 +20,6 @@ require ['game', 'stage'], (Game, Stage) ->
   # core setting
   core = new Core(Stage.width, Stage.height)
   core.preload ['/images/player.png'
-                '/images/icon0.png'
                 '/images/map0.png'
                 '/images/hpbar.png'
                 '/images/bar_cell.png'

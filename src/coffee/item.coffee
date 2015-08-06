@@ -1,0 +1,42 @@
+define ->
+  # remove global
+  fps = 20
+  eu = ElzupUtils
+  Vector2 = tm.geom.Vector2
+
+  class Item
+    @type:
+      monopoly: 3
+      lifeUp: 4
+    width: 32
+    height: 32
+
+    # remove @pos
+    constructor: (@mx, @my, @type, @core, @game, @pos) ->
+      @s = new Sprite(32, 32)
+      @pos.sub(new Vector2(@r(), @r()))
+      @s.image = @core.assets['/images/item.png']
+      @s.frame = @type
+      console.log(@pos)
+      @s.moveTo(@pos.x, @pos.y)
+      @core.rootScene.addChild(@s)
+
+    @getRandomType: ->
+      arr = []
+      arr.push val for key, val of Item.type
+      return arr[Math.floor(Math.random() * arr.length)]
+
+    @posEquals: (item) ->
+      @mx == item.mx && @my == item.my
+
+    r: ->
+      @width / 2
+    oX: ->
+      @pos.x + @width / 2
+    oY: ->
+      @pos.y + @height / 2
+    oPos: ->
+      new Vector2(@oX(), @oY())
+    ePos: ->
+      new Vector2(@pos.x + @width, @pos.y + @height)
+  return Item
