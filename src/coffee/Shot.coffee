@@ -36,10 +36,6 @@ define ['stage'], (Stage) ->
           @game.stage.map.loadData(@game.stage.baseMap)
           @mp -= 1
 
-      # ブロック衝突判定
-      if Stage.isBlock(@game.stage.mapType(@oPos()))
-        @die()
-
     die: ->
       [mx, my] = Stage.toMpos(@oPos())
       @game.stage.fillMp(mx, my, @mp)

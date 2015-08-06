@@ -28,8 +28,32 @@ define ['player', 'stage'], (Player, Stage) ->
             player.v.add(shot.v.mul(3.0))
             shot.die()
             player.damage()
-            delete @stage.shots[id]
+            @stage.shots.splice(id, 1)
+
+      # shot - shot 衝突チェック
+      shotNum = @stage.shots.length
+      if shotNum > 0
+        dieIds = []
+        for id1 in [0...shotNum]
+          shot1 = @stage.shots[id1]
+          # ブロック衝突判定
+          if Stage.isBlock(@stage.mapType(shot1.oPos()))
+            dieIds.push(id1)
             continue
+
+          for id2 in [(id1 + 1)...shotNum]
+            shot2 = @stage.shots[id2]
+            if shot1.team == shot2.team
+              continue
+            if Game.conflictElems(shot1, shot2)
+              dieIds.push(id1)
+              dieIds.push(id2)
+
+        if dieIds.length > 0
+          dieIds.sort (a, b) -> b - a
+          for id in dieIds
+            @stage.shots[id].die()
+            @stage.shots.splice(id, 1)
 
       if @age() % @_addItemInterval == 0 and
           Object.keys(@players).length > 0
