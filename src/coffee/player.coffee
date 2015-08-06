@@ -1,4 +1,4 @@
-define ['dom_manager', 'shot', 'stage'], (DomManager, Shot, Stage) ->
+define ['dom_manager', 'shot', 'stage', 'item'], (DomManager, Shot, Stage, Item) ->
   # TODO: remove Stage
   # remove global
   fps = 20
@@ -238,18 +238,10 @@ define ['dom_manager', 'shot', 'stage'], (DomManager, Shot, Stage) ->
       @v = k
 
     recoverMapMP: ->
-      [@msx, @msy] = Stage.toMpos(@pos)
-      [@mex, @mey] = Stage.toMpos(@ePos())
-      cmp = 0
-      for my in [@msy..@mey]
-        for mx in [@msx..@mex]
-          if @game.stage.baseMap[my][mx] == Stage.blockType.mp
-            @game.stage.baseMap[my][mx] = Stage.blockType.none
-            cmp += 1
+      mpSum = @game.stage.popSquareMP(@pos, @ePos())
       DomManager.updatePlayerDom(this)
-      @game.stage.map.loadData(@game.stage.baseMap)
-      if cmp > 0
-        @updateMp(cmp)
+      if mpSum > 0
+        @updateMp(mpSum)
 
     moved: ->
       @v.length() != 0
@@ -277,6 +269,14 @@ define ['dom_manager', 'shot', 'stage'], (DomManager, Shot, Stage) ->
         @isDie = false
       )
 
+    appendItem: (type) ->
+      switch type
+        when Item.type.lifeUp
+          @updateHp(8)
+        when Item.type.monopoly
+          mpSum = @game.stage.popAllMP()
+          @updateMp(mpSum)
+
     r: ->
       @width / 2
     oX: ->
@@ -287,5 +287,6 @@ define ['dom_manager', 'shot', 'stage'], (DomManager, Shot, Stage) ->
       new Vector2(@oX(), @oY())
     ePos: ->
       new Vector2(@pos.x + @width, @pos.y + @height)
+
   return Player
 

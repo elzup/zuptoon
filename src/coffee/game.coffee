@@ -3,7 +3,7 @@ define ['player', 'stage'], (Player, Stage) ->
   class Game
     startTme: 0
 
-    _addItemInterval: fps * 5
+    _addItemInterval: fps * 20
 
     constructor: (@core) ->
       @players = {}
@@ -13,8 +13,15 @@ define ['player', 'stage'], (Player, Stage) ->
     onenterframe: ->
       for id, player of @players
         player.onenterframe()
-      # TODO: player > 0
-      if @age() % @_addItemInterval == 0
+        for idItem, item of @stage.items
+          if Game.conflictItem(player, item)
+            console.log "conf"
+            player.appendItem(item.type)
+            @stage.items[idItem].close()
+            delete @stage.items[idItem]
+
+      if @age() % @_addItemInterval == 0 and
+          Object.keys(@players).length > 0
         @stage.inclementItem()
 
     age: ->
@@ -46,5 +53,11 @@ define ['player', 'stage'], (Player, Stage) ->
       if !@players[id]?
         return
       @players[id].shot(rad, pow)
+
+    @conflictItem: (player, item) ->
+      r = player.r() + item.r()
+      dx = player.pos.x - item.pos.x
+      dy = player.pos.y - item.pos.y
+      return Math.pow(r, 2) > Math.pow(dx, 2) + Math.pow(dy, 2)
 
   return Game

@@ -74,7 +74,7 @@ define ['item'], (Item) ->
               @baseMap[j][i] = Stage.blockType.block
             if j in Stage.heightEnds() or i in Stage.widthEnds()
               @baseMap[j][i] = Stage.blockType.wall
-        @map.loadData(@baseMap)
+        @reloadMap()
       else
         if stageType == Stage.type.wall
           filename = "/data/map_wall.json"
@@ -89,9 +89,8 @@ define ['item'], (Item) ->
               p = @baseMap[j][i]
               if not Stage.isBlock(p) and p != Stage.blockType.none
                 Stage.initPos[p - 1] = new Vector2(i, j)
-          @map.loadData(@baseMap)
+          @reloadMap()
           console.log "map loaded"
-
 
     @isBlock: (type) ->
       type in Stage.wall()
@@ -151,15 +150,13 @@ define ['item'], (Item) ->
           break
         if mp <= 0
           break
-      @map.loadData(@baseMap)
+      @reloadMap()
 
     inclementItem: ->
       type = Item.getRandomType()
       [mx, my] = @getRandomEmptyMPos()
-      console.log [mx, my]
       item = new Item(mx, my, type, @core, @game, Stage.toSpos(mx, my))
       @items.push(item)
-      console.log item
       console.log "item generated"
 
     getRandomEmptyMPos: ->
@@ -185,6 +182,33 @@ define ['item'], (Item) ->
       mx = eu.rand_range(Stage.widthN)
       my = eu.rand_range(Stage.heightN)
       return [mx, my]
+
+    popAllMP: ->
+      mpSum = 0
+      for j in [0...Stage.heightN]
+        for i in [0...Stage.widthN]
+          if @baseMap[j][i] == Stage.blockType.mp
+            @baseMap[j][i] = Stage.blockType.none
+            mpSum += 1
+      if mpSum > 0
+        @reloadMap()
+      return mpSum
+
+    popSquareMP: (sPos, ePos) ->
+      mpSum = 0
+      [msx, msy] = Stage.toMpos(sPos)
+      [mex, mey] = Stage.toMpos(ePos)
+      for my in [msy..mey]
+        for mx in [msx..mex]
+          if @baseMap[my][mx] == Stage.blockType.mp
+            @baseMap[my][mx] = Stage.blockType.none
+            mpSum += 1
+      if mpSum > 0
+        @reloadMap()
+      return mpSum
+
+    reloadMap: ->
+      @map.loadData(@baseMap)
 
   return Stage
 

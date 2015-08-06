@@ -17,7 +17,6 @@ define ->
       @pos.sub(new Vector2(@r(), @r()))
       @s.image = @core.assets['/images/item.png']
       @s.frame = @type
-      console.log(@pos)
       @s.moveTo(@pos.x, @pos.y)
       @core.rootScene.addChild(@s)
 
@@ -28,6 +27,9 @@ define ->
 
     @posEquals: (item) ->
       @mx == item.mx && @my == item.my
+
+    close: ->
+      @core.rootScene.removeChild(@s)
 
     r: ->
       @width / 2
