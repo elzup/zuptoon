@@ -2,7 +2,6 @@ define ['player', 'stage'], (Player, Stage) ->
   fps = 20
   class Game
     startTme: 0
-
     _addItemInterval: fps * 20
 
     constructor: (@core) ->

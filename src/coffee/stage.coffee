@@ -7,16 +7,16 @@ define ['item'], (Item) ->
   getParams = eu.get_parameters()
 
   class Stage
-    @cellSize = 8
-    @widthN = 64 * 2
-    @heightN = 48 * 2
-    @width = Stage.widthN * Stage.cellSize
-    @height = Stage.heightN * Stage.cellSize
+    @cellSize: 8
+    @widthN: 64 * 2
+    @heightN: 48 * 2
+    @width: Stage.widthN * Stage.cellSize
+    @height: Stage.heightN * Stage.cellSize
 
-    @widthTopN = 0
-    @widthEndN = Stage.widthN - 1
-    @heightTopN = 0
-    @heightEndN = Stage.heightN - 1
+    @widthTopN: 0
+    @widthEndN: Stage.widthN - 1
+    @heightTopN: 0
+    @heightEndN: Stage.heightN - 1
 
     @type:
       flat: 0
@@ -31,7 +31,7 @@ define ['item'], (Item) ->
       block: 5
       wall: 6
 
-    @initPos = [
+    @initPos: [
       new Vector2(Stage.widthN / 7, Stage.heightN / 10)
       new Vector2(Stage.widthN * 6 / 7, Stage.heightN / 10)
       new Vector2(Stage.widthN / 7, Stage.heightN * 6 / 10)

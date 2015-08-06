@@ -1,4 +1,5 @@
-define ['dom_manager', 'shot', 'stage', 'item'], (DomManager, Shot, Stage, Item) ->
+define ['dom_manager', 'shot', 'stage', 'item']
+    ,(DomManager, Shot, Stage, Item) ->
   # TODO: remove Stage
   # remove global
   fps = 20
@@ -19,12 +20,12 @@ define ['dom_manager', 'shot', 'stage', 'item'], (DomManager, Shot, Stage, Item)
     preShotAge: 0
     width: 32
     height: 32
-    @color = ['red', 'yellow', 'blue', 'green']
+    @color: ['red', 'yellow', 'blue', 'green']
 
     # ショット後のデュレイ
-    @shotRapidDelay = fps * 0.2
+    @shotRapidDelay: fps * 0.2
     # 重なり順序優先度
-    @zShift = 10000
+    @zShift: 10000
 
     @frame:
       none: -1
@@ -289,4 +290,3 @@ define ['dom_manager', 'shot', 'stage', 'item'], (DomManager, Shot, Stage, Item)
       new Vector2(@pos.x + @width, @pos.y + @height)
 
   return Player
-
