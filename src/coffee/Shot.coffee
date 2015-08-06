@@ -40,18 +40,6 @@ define ['stage'], (Stage) ->
       if Stage.isBlock(@game.stage.mapType(@oPos()))
         @die()
 
-      # プレイヤー衝突判定
-      for id, player of @game.players
-        if player.team == @team || player.isDie
-          continue
-        dx = player.oX() - @oX()
-        dy = player.oY() - @oY()
-        if dx * dx + dy * dy < Math.pow((@width / 2 + player.width) / 2, 2)
-          player.v.add(@v.mul(3.0))
-          @die()
-          player.damage()
-          return
-
     die: ->
       [mx, my] = Stage.toMpos(@oPos())
       @game.stage.fillMp(mx, my, @mp)

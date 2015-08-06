@@ -12,12 +12,24 @@ define ['player', 'stage'], (Player, Stage) ->
     onenterframe: ->
       for id, player of @players
         player.onenterframe()
+        # player - item 衝突チェック
         for idItem, item of @stage.items
-          if Game.conflictItem(player, item)
+          if Game.conflictElems(player, item)
             console.log "conf"
             player.appendItem(item.type)
             @stage.items[idItem].close()
             delete @stage.items[idItem]
+
+        # player - shot 衝突チェック
+        for id, shot of @stage.shots
+          if player.team == shot.team || player.isDie
+            continue
+          if Game.conflictElems(player, shot)
+            player.v.add(shot.v.mul(3.0))
+            shot.die()
+            player.damage()
+            delete @stage.shots[id]
+            continue
 
       if @age() % @_addItemInterval == 0 and
           Object.keys(@players).length > 0
@@ -53,10 +65,13 @@ define ['player', 'stage'], (Player, Stage) ->
         return
       @players[id].shot(rad, pow)
 
-    @conflictItem: (player, item) ->
-      r = player.r() + item.r()
-      dx = player.pos.x - item.pos.x
-      dy = player.pos.y - item.pos.y
-      return Math.pow(r, 2) > Math.pow(dx, 2) + Math.pow(dy, 2)
+    @conflictElems: (elem1, elem2) ->
+      Game.conflictCircle(elem1.oPos(), elem1.r(), elem2.oPos(), elem2.r())
+
+    @conflictCircle: (pos1, r1, pos2, r2) ->
+      r = r1 + r2
+      dx = pos1.x - pos2.x
+      dy = pos1.y - pos2.y
+      Math.pow(r, 2) >= Math.pow(dx, 2) + Math.pow(dy, 2)
 
   return Game

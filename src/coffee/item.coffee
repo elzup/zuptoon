@@ -13,7 +13,7 @@ define ->
 
     # remove @pos
     constructor: (@mx, @my, @type, @core, @game, @pos) ->
-      @s = new Sprite(32, 32)
+      @s = new Sprite(@width, @height)
       @pos.sub(new Vector2(@r(), @r()))
       @s.image = @core.assets['/images/item.png']
       @s.frame = @type

@@ -50,6 +50,7 @@ define ['item'], (Item) ->
       @core.rootScene.addChild(@map)
       @setupMap()
       @items = []
+      @shots = []
 
     setupMap: ->
       # 指定があればステージタイプを決める
@@ -151,6 +152,9 @@ define ['item'], (Item) ->
         if mp <= 0
           break
       @reloadMap()
+
+    addShot: (shot) ->
+      @shots.push(shot)
 
     inclementItem: ->
       type = Item.getRandomType()

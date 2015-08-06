@@ -125,8 +125,8 @@ define ['dom_manager', 'shot', 'stage', 'item']
       @preShotAge = @s.age
 
       pos = @pos.clone().add(v.clone().mul(3))
-      # un save instance
-      new Shot(pos, v, @team, pmp, @core, @game)
+      shot = new Shot(pos, v, @team, pmp, @core, @game)
+      @game.stage.addShot(shot)
       @s.rotation = 180 - @rad * 180 / Math.PI
       DomManager.updatePlayerDom(this)
 
