@@ -1,0 +1,25 @@
+{
+  "name": "zuptoon",
+  "version": "0.0.0",
+  "homepage": "https://github.com/elzzup/zuptoon",
+  "authors": [
+    "elzzup <guild0105@gmail.com>"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.1.4",
+    "require-cs": "~0.5.0",
+    "jquery-qrcode": "*",
+    "vec2d": "~2.1.0",
+    "requirejs": "~2.1.20",
+    "tmlib.js": "~0.5.2",
+    "victor": "~0.2.6"
+  }
+}
