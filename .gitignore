@@ -83,3 +83,6 @@ crashlytics-build.properties
 
 # temp escape
 ./public/javascripts/gShake.js
+
+# secret
+run.sh
