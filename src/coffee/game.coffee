@@ -25,9 +25,8 @@ define ['player', 'stage'], (Player, Stage) ->
           if player.team == shot.team || player.isDie
             continue
           if Game.conflictElems(player, shot)
-            player.v.add(shot.v.mul(3.0))
             shot.die()
-            player.damage()
+            player.collision(shot.v)
             @stage.shots.splice(id, 1)
 
       # shot - shot 衝突チェック

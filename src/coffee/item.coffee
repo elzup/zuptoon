@@ -8,6 +8,7 @@ define ->
     @type:
       monopoly: 6
       lifeUp: 7
+      star: 8
     width: 32
     height: 32
 

@@ -20,6 +20,8 @@ define ['dom_manager', 'shot', 'stage', 'item']
     preShotAge: 0
     width: 32
     height: 32
+    type: null
+    typeTimer: 0
     @color: ['red', 'yellow', 'blue', 'green']
 
     # ショット後のデュレイ
@@ -133,6 +135,8 @@ define ['dom_manager', 'shot', 'stage', 'item']
     walk: (@rad, @pow) ->
       mr = @pow / 90 * 2
       va = new Vector2.LEFT.clone().setRadian(Math.PI / 2 - @rad).mul(mr)
+      if @isStar()
+        va = va.mul(1.5)
       @v.add va
       if @isShotable()
         @s.rotation = 180 - @rad * 180 / Math.PI
@@ -154,7 +158,10 @@ define ['dom_manager', 'shot', 'stage', 'item']
       Math.atan2(@v.x, @v.y)
 
     onenterframe: ->
-      if @moved()
+      if @isStar()
+        f = [Player.frame.walk, Player.frame.super][eu.period(@s.age, 4, 2)]
+        @s.frame = @team * 5 + f
+      else if @moved()
         f = [Player.frame.walk, Player.frame.stand][eu.period(@s.age, 8, 2)]
         @s.frame = @team * 5 + f
       else
@@ -172,6 +179,13 @@ define ['dom_manager', 'shot', 'stage', 'item']
       if @v.length() < 0.5
         @v = Vector2.ZERO.clone()
       @move()
+
+      # 状態異常の時間切れ確認
+      if @typeTimer > 0
+        @typeTimer -= 1
+        if @typeTimer == 0
+          @type = null
+
 
     safeMove: ->
       vx = @v.x
@@ -270,6 +284,8 @@ define ['dom_manager', 'shot', 'stage', 'item']
         @isDie = false
       )
 
+    @statusTimer: fps * 10
+
     appendItem: (type) ->
       switch type
         when Item.type.lifeUp
@@ -277,6 +293,17 @@ define ['dom_manager', 'shot', 'stage', 'item']
         when Item.type.monopoly
           mpSum = @game.stage.popAllMP()
           @updateMp(mpSum)
+        when Item.type.star
+          @type = Item.type.star
+          @typeTimer = Player.statusTimer
+
+    isStar: ->
+      @type == Item.type.star
+
+    collision: (v) ->
+      if not @isStar()
+        @v.add(v.mul(3.0))
+        @damage()
 
     r: ->
       @width / 2
