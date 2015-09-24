@@ -76,7 +76,11 @@ crashlytics-build.properties
 # compiled
 *.html
 *.css
+*.css.map
 *.js
 
 # temp escape
 ./public/javascripts/gShake.js
+
+
+bower_components/
