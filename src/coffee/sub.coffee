@@ -104,8 +104,8 @@ $ ->
 
   get_params = ElzupUtils.get_parameters()
   # socket io
-  socket_url = 'http://192.168.1.50'
-  socket = io.connect socket_url
+  socket = io.connect()
+
   # TODO: team
   socket.emit 'new',
     type: get_params['type']
