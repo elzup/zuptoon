@@ -52,7 +52,7 @@ $ ->
     plus_swim: 3
 
   # GAME_TIME_LIMIT_SEC = 90
-  GAME_TIME_LIMIT_SEC = 90
+  GAME_TIME_LIMIT_SEC = 30
   GAME_TIME_PRE_FINISH = parseInt(GAME_TIME_LIMIT_SEC / 6)
   FOOTER_HEIGHT = 80
   Controller =
