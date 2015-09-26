@@ -13,12 +13,12 @@ skio = (server, io) ->
     io.emit 'count', count: person_count
 
     socket.on 'shake', ->
-      console.log 'shake!' + socket.id
+      # console.log 'shake!' + socket.id
       io.to('top').emit 'shake', id: socket.id
       return
 
     socket.on 'move', (data) ->
-      console.log 'move!' + socket.id
+      # console.log 'move!' + socket.id
       data.id = socket.id
       io.emit 'move', data
       return
