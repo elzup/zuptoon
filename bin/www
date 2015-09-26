@@ -28,14 +28,14 @@ io.on('connection', function(socket) {
     io.emit('count', { count: person_count });
 
     socket.on('shake', function(data) {
-        console.log('shake!' + socket.id);
+        /* console.log('shake!' + socket.id); */
         data.id = socket.id;
         io.emit('shake', data);
     });
 
     socket.on('move', function(data) {
-        console.log('move!' + data);
-        console.log('shake!');
+        /* console.log('move!' + data); */
+        /* console.log('shake!'); */
         data.id = socket.id;
         io.emit('move', data);
     });
