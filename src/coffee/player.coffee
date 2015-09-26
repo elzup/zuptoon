@@ -284,12 +284,12 @@ define ['dom_manager', 'shot', 'stage', 'item']
         @isDie = false
       )
 
-    @statusTimer: fps * 10
+    @statusTimer: fps * 5
 
     appendItem: (type) ->
       switch type
         when Item.type.lifeUp
-          @updateHp(8)
+          @updateHp(4)
         when Item.type.monopoly
           mpSum = @game.stage.popAllMP()
           @updateMp(mpSum)
@@ -302,7 +302,7 @@ define ['dom_manager', 'shot', 'stage', 'item']
 
     collision: (v) ->
       if not @isStar()
-        @v.add(v.mul(3.0))
+        @v.add(v.mul(6.0))
         @damage()
 
     r: ->
