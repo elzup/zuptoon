@@ -185,7 +185,7 @@ $ ->
       @.image = sfc
       delay = FPS * 0.5
       if @.type == LiquidType.line
-        delay = FPS * 0.1
+        @.parentNode.removeChild(@)
       @.tl.scaleTo(@.scaler, @.scaler, delay).then(->
         fill_pos_circle(@.ox(), @.oy(), @.r(), @.team)
         @.parentNode.removeChild(@)
@@ -499,18 +499,19 @@ $ ->
     # NOTE: マップに対する変更箇所全てに必要
     update_score()
 
+  # mx, my 座標を塗りつぶす
   fill_map = (mx, my, team) ->
     if ElzupUtils.clamp(my, MAP_HEIGHT_NUM - 2, 1) != my || ElzupUtils.clamp(mx, MAP_WIDTH_NUM - 2, 1) != mx
       return
     pre = baseMap[my][mx]
-    if pre == team + COL_SHIFT or is_block(pre)
+    isb = is_block(pre)
+    if pre == team + COL_SHIFT or isb
       return
     baseMap[my][mx] = team + COL_SHIFT
     # スコア更新
     score[team] += 1
-    if pre == 0
-      return
-    score[pre - 1] -= 1
+    if pre != 0
+      score[pre - 1] -= 1
 
   map_pos = (sx, sy, r = 0) ->
     mx = ElzupUtils.clamp(Math.floor((sx + r) / MAP_MATRIX_SIZE), MAP_WIDTH_NUM)
@@ -559,12 +560,14 @@ $ ->
   fill_pos_line = (x1, y1, x2, y2, team) ->
     c = 10
     for i in [0...c]
-      px = x2 + (i / c) * (x1 - x2)
-      py = y2 + (i / c) * (y1 - y2)
+      px = x1 + (i / c) * (x2 - x1)
+      py = y1 + (i / c) * (y2 - y1)
       [mx, my] = map_pos(px, py)
       for dx in [-1...2]
         for dy in [-1...2]
           fill_map(mx + dx, my + dy, team)
+      if is_block(baseMap[my][mx])
+        break
     if SHOW_TYPE == ShowType.matrix_fill
       map.loadData(baseMap)
     # graphical line
