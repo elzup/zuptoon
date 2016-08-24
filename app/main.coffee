@@ -27,8 +27,9 @@ normalizePort = (val) ->
 # Get port from environment and store in Express.
 ###
 
-port = normalizePort(process.env.PORT or '8080')
+port = normalizePort(process.env.PORT or '8888')
 app.set 'port', port
+console.log('localhost:8888')
 
 ###
 # Event listener for HTTP server "error" event.
