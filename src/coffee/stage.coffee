@@ -1,10 +1,8 @@
 define ['item'], (Item) ->
   # remove global
   fps = 20
-  eu = ElzupUtils
   Vector2 = tm.geom.Vector2
 
-  getParams = eu.get_parameters()
 
   class Stage
     @cellSize: 8
@@ -54,6 +52,8 @@ define ['item'], (Item) ->
 
     setupMap: ->
       # 指定があればステージタイプを決める
+      eu = ElzupUtils
+      getParams = eu.get_parameters()
       if getParams.type
         stageType = parseInt(getParams.type)
       else
@@ -100,9 +100,11 @@ define ['item'], (Item) ->
       [Stage.toMx(spos.x + r), Stage.toMy(spos.y + r)]
 
     @toMx: (sx) ->
+      eu = ElzupUtils
       eu.clamp(Math.floor(sx / Stage.cellSize), Stage.widthN - 1)
 
     @toMy: (sy) ->
+      eu = ElzupUtils
       eu.clamp(Math.floor(sy / Stage.cellSize), Stage.heightN - 1)
 
     @toSpos: (mx, my) ->
@@ -129,6 +131,7 @@ define ['item'], (Item) ->
       k = 0
       # 中央から外側に向けて塗りつぶす
       while true
+        eu = ElzupUtils
         msy = eu.clamp(oy - k, Stage.heightEndN)
         mey = eu.clamp(oy + k, Stage.heightEndN)
         msx = eu.clamp(ox - k, Stage.widthEndN)
