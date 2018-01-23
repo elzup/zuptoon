@@ -1,9 +1,10 @@
 define ->
-  eu = ElzupUtils
   class DomManager
     @addPlayerDom: (player) ->
+      console.log player.id.slice(1)
+      eu = ElzupUtils
       $playerElem = ($ '<p/>').attr
-        user_id: player.id
+        user_id: player.id.slice(1)
         class: 'player'
       $i = ($ '<i/>').addClass('fa')
       switch (player.ua)
@@ -23,8 +24,8 @@ define ->
       ($ ".team-box[team=#{player.team}]").append($playerElem)
 
     @updatePlayerDom: (player) ->
-      pElem = ($ ".player[user_id=#{player.id}]")
+      pElem = ($ ".player[user_id=#{player.id.slice(1)}]")
 
     @removePlayerDom: (player) ->
-      ($ ".player[user_id=#{player.id}]").remove()
+      ($ ".player[user_id=#{player.id.slice(1)}]").remove()
   return DomManager
